@@ -1,23 +1,32 @@
 # Markdown Parser
 
-## 使用
+## use
 ```
 npm i markdown-parser
+yarn add markdown-parser
 ```
 
-代码高亮使用[highlight](https://github.com/isagalaev/highlight.js)
+support [highlight](https://github.com/isagalaev/highlight.js)
 
 ```js
 import markdown from 'markdown-parser'
-markdown.config({
-    highlightSource: ['/ddd/ddd/highlight.min.js', '/ddd/ddd/highlight.theme.css'] // 配置代码高亮库
+import 'markdown-parser/src/theme.css'
+
+markdown(dom, str, {
+    highlightSource: ['/ddd/ddd/highlight.min.js', '/ddd/ddd/highlight.theme.css'], // 可以传入highlight的相关js/css资源
 })
-markdown(dom, str)
 ```
 
-## 支持的语法规则
+## support rules
+支持audio/video/iframe
 ```
+!![语音](src/audio)
+!!![视频](src/video)
+!![支持iframe](<iframe></iframe>)
 ```
+
+## issue
+[移步 github issue](https://github.com/LingYanSi/markdown-parser/issues)
 
 ## 补充说明
-- highlight.js 目前不支持显示行数[解释在这里](https://highlightjs.readthedocs.io/en/latest/line-numbers.html)
+- highlight.js 目前不支持显示代码行数[解释在这里](https://highlightjs.readthedocs.io/en/latest/line-numbers.html)
