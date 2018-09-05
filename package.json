@@ -2,9 +2,10 @@
   "name": "lys-markdown-parser",
   "version": "0.0.2",
   "description": "a js markdown parser",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "st": "npm run anywhere"
+    "st": "npm run anywhere",
+    "build": "babel src/index.js --out-file dist/index.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,15 @@
   },
   "homepage": "https://github.com/LingYanSi/markdown-parser#readme",
   "dependencies": {
-    "anywhere": "^1.5.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/plugin-proposal-class-properties": "^7.0.0",
+    "@babel/plugin-proposal-decorators": "^7.0.0",
+    "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
+    "@babel/plugin-syntax-dynamic-import": "^7.0.0",
+    "@babel/plugin-transform-async-to-generator": "^7.0.0",
+    "@babel/preset-env": "^7.0.0"
   }
 }
