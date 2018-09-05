@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script></script>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <textarea name="" id="" cols="30" rows="10" placeholder="markdown"></textarea>
+    <button>render</button>
+    <div id="render"></div>
+    <script type="module">
+        import markdown from '../src/index.js'
+        function $(s) {
+            return document.querySelector(s)
+        }
+
+        function render() {
+            const content = $('textarea').value;
+            localStorage.setItem('markdown', content)
+            markdown($('#render'), content)
+        }
+        $('textarea').value = localStorage.getItem('markdown') || ``
+        render()
+
+        $('button').addEventListener('click', render)
+    </script>
+</body>
+</html>

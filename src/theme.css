@@ -1,0 +1,53 @@
+/*
+* markdown style
+*/
+
+.markdown queto {
+    margin: 1em 0;
+    padding-left: 20px;
+    border-left: 4px solid #42b983;
+    display: block;
+}
+
+.markdown hr {
+    border: none;
+    height: 1px;
+    background: #ddd;
+    margin: 2em 0;
+}
+
+.markdown img {
+    max-width: 100%;
+    height: auto;
+}
+
+.markdown a, .markdown a * {
+    color: #42b983;
+    text-decoration: none;
+}
+
+.markdown code.inlineCode {
+    background-color: #f8f8f8;
+    color: #e96900;
+    padding: 3px 5px;
+    margin: 0 2px;
+    border-radius: 2px;
+    white-space: nowrap;
+}
+
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5 {
+    margin: .5em 0;
+}
+
+.markdown ul {
+    padding-left: 2em;
+}
+
+.markdown table {
+    border: 1px solid #333;
+    border-collapse: collapse;
+}
+
+.markdown table th,.markdown table td {
+    padding: .5em;
+}

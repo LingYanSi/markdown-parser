@@ -1,10 +1,10 @@
 {
   "name": "lys-markdown-parser",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "a js markdown parser",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "npm run test"
+    "st": "npm run anywhere"
   },
   "repository": {
     "type": "git",
@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/LingYanSi/markdown-parser/issues"
   },
-  "homepage": "https://github.com/LingYanSi/markdown-parser#readme"
+  "homepage": "https://github.com/LingYanSi/markdown-parser#readme",
+  "dependencies": {
+    "anywhere": "^1.5.0"
+  }
 }
