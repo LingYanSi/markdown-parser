@@ -41,6 +41,7 @@
 
 .markdown ul {
     padding-left: 2em;
+    list-style: inherit;
 }
 
 .markdown table {
