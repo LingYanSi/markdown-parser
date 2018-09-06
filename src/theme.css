@@ -41,6 +41,9 @@
 
 .markdown ul {
     padding-left: 2em;
+}
+
+.markdown ul, .markdown li {
     list-style: inherit;
 }
 
