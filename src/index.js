@@ -13,24 +13,27 @@ const Reg = {
     get hr() {
         return /(^-{3,}[^\n]+\n?)/
     },
-    // 行内code
-    get inlineCode() {
-        return /^`([^`]*)`/
-    },
     get code() {
         return /^`{3}(((?!```)[\s\S])*)`{3}/
     },
     get queto() {
-        return /^\s*>(((?!\n\n)[\s\S])*)\n\n/
+        return /^>(((?!\n\n)[\s\S])*)\n\n/
     },
     get head() {
         return /^(#{1,6})([^\n]*)\n?/
     },
+    get ul() {
+        return /^([-+]\s+((?!\n\n)[\s\S])*)\n\n/
+    },
+    get url() {
+        return /^\[([^\]]+)\]\(([^)]+)\)/
+    },
+    // 行内code
+    get inlineCode() {
+        return /^`([^`]*)`/
+    },
     get br() {
         return /^\n/
-    },
-    get ul() {
-        return /^\s*([-+]\s+((?!\n\n)[\s\S])*)\n\n/
     },
     get text() {
         return /^[^\n]*\n?/
@@ -49,9 +52,6 @@ const Reg = {
     },
     get img() {
         return /^!\[([^\]]*)\]\(([^)]+)\)/
-    },
-    get url() {
-        return /^\[([^\]]+)\]\(([^)]+)\)/
     },
 }
 
@@ -738,31 +738,32 @@ function info(str = '') {
     return item
 }
 
+const loadedAsset = {}
 // 加载静态资源
 function loadAsset(url) {
-    if (url.endsWith('.js')) {
-        return new Promise(res => {
+    return new Promise(res => {
+        if (loadedAsset[url]) {
+            return res();
+        }
+        const onload = () => {
+            loadedAsset[url] = true
+            res()
+        }
+        if (url.endsWith('.js')) {
             const s = document.createElement('script')
-            s.onload = () => {
-                res()
-            }
+            s.onload = onload
             s.src = url
             document.head.appendChild(s)
-        })
-    }
-    if (url.endsWith('.css')) {
-        return new Promise(res => {
+        } else if (url.endsWith('.css')) {
             const s = document.createElement('link')
-            s.onload = () => {
-                res()
-            }
+            s.onload = onload
             s.type = "text/css"
             s.rel = "stylesheet"
             s.charset = "utf-8"
             s.href = url
             document.head.appendChild(s)
-        })
-    }
+        }
+    })
 }
 
 /**

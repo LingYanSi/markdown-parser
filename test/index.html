@@ -4,19 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
-    <script></script>
+    <title>mark-down demo</title>
     <style>
         * {
             padding: 0;
             margin: 0;
         }
+        textarea, #render {
+            display: block;
+            width: 50vw;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            padding: 20px;
+        }
+        #render {
+            border-left: 1px solid #eee;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .main {
+            min-height: 100vh;
+            align-items: stretch;
+        }
     </style>
+    <link rel="stylesheet" href="../src/theme.css">
 </head>
 <body>
-    <textarea name="" id="" cols="30" rows="10" placeholder="markdown"></textarea>
-    <button>render</button>
-    <div id="render"></div>
+    <div class="flex main">
+        <textarea placeholder="write something" autofocus></textarea>
+        <div id="render"></div>
+    </div>
     <script type="module">
         import markdown from '../src/index.js'
         function $(s) {
@@ -28,10 +49,51 @@
             localStorage.setItem('markdown', content)
             markdown($('#render'), content)
         }
+
         $('textarea').value = localStorage.getItem('markdown') || ``
         render()
 
-        $('button').addEventListener('click', render)
+        function hotKey(dom = document.body, keys, callback) {
+            let cacheKeys = []
+            const maps = {
+                '91': 'ctrl',
+                '83': 's',
+            }
+
+            function clear() {
+                if (cacheKeys[0] !== 91) {
+                    cacheKeys = []
+                }
+            }
+
+            function keyDown(event) {
+                const { keyCode } = event
+                clear()
+
+                if (!cacheKeys[0] && maps[keyCode] == 'ctrl') {
+                    cacheKeys.push(keyCode)
+                    return
+                }
+
+                if (cacheKeys[0] && !cacheKeys[1] && maps[keyCode] == 's') {
+                    navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey
+                    cacheKeys.push(keyCode)
+                    callback && callback()
+                    event.preventDefault()
+                    return
+                }
+            }
+
+            function keyUp({ keyCode }) {
+                cacheKeys = cacheKeys.filter(i => i !== keyCode)
+                clear()
+            }
+
+            dom.addEventListener('keydown', keyDown)
+            dom.addEventListener('keyup', keyUp)
+        }
+
+        hotKey(window, 'ctrl+s', render)
     </script>
 </body>
 </html>
