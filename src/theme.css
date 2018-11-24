@@ -9,6 +9,10 @@
     display: block;
 }
 
+.markdown queto[tag="bad"] {
+    border-color: red;
+}
+
 .markdown hr {
     border: none;
     height: 1px;

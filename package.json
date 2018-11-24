@@ -4,7 +4,7 @@
   "description": "a js markdown parser",
   "main": "dist/index.js",
   "scripts": {
-    "st": "npm run anywhere",
+    "st": "anywhere -p 9001",
     "build": "babel src/index.js --out-file dist/index.js"
   },
   "repository": {
@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/LingYanSi/markdown-parser#readme",
   "dependencies": {
+    "anywhere": "^1.5.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.0.0",

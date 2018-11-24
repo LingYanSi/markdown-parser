@@ -12,7 +12,6 @@
         }
         textarea, #render {
             display: block;
-            width: 50vw;
             box-sizing: border-box;
             border: none;
             outline: none;
@@ -26,9 +25,33 @@
             display: flex;
         }
 
+        .flex>* {
+            flex: 1;
+        }
+
         .main {
             min-height: 100vh;
             align-items: stretch;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        #full {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 10px;
+            background: inherit;
+            border: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        #full:hover {
+            transition: all .3s;
+            background: pink;
         }
     </style>
     <link rel="stylesheet" href="../src/theme.css">
@@ -37,17 +60,26 @@
     <div class="flex main">
         <textarea placeholder="write something" autofocus></textarea>
         <div id="render"></div>
+        <button id="full">full</button>
     </div>
     <script type="module">
-        import markdown from '../src/index.js'
+        import Markdown from '../src/index.js'
+        import { diffNode } from '../src/diff.js'
+
         function $(s) {
             return document.querySelector(s)
         }
 
+        $('#full').addEventListener('click', () => {
+            $('textarea').classList.toggle('hide')
+        })
+
+        const mk = new Markdown($('#render'))
+
         function render() {
             const content = $('textarea').value;
             localStorage.setItem('markdown', content)
-            markdown($('#render'), content)
+            mk.update(content)
         }
 
         $('textarea').value = localStorage.getItem('markdown') || ``
