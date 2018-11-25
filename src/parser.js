@@ -55,7 +55,7 @@ export const Reg = {
     },
 }
 
-function parseQuetoType(str = '', startTag = '[', endTag = ']') {
+function getMatchResult(str = '', startTag = '[', endTag = ']') {
     let index = 0
     let startIndex = -1
     let openMatch = 0
@@ -128,7 +128,7 @@ export function parser(str = '') {
         const cacheNode = node
         node = child
         child.__parent = node
-        callback()
+        callback && callback()
         node = cacheNode
         isPush && node.children.push(child)
     }
@@ -509,7 +509,7 @@ export function parser(str = '') {
         // 引用
         if (Reg.queto.test(str)) {
             const [all, match] = str.match(Reg.queto)
-            const [tag, leftStr] = parseQuetoType(match, '[', ']')
+            const [tag, leftStr] = getMatchResult(match, '[', ']')
 
             const h = {
                 type: 'queto',
@@ -548,6 +548,10 @@ export function parser(str = '') {
                 handleUl(match)
             }, { isPush: false })
 
+            node.children.push({
+                type: 'br',
+            })
+
             slice(all)
 
             next()
@@ -577,15 +581,7 @@ export function parser(str = '') {
         // 单行text
         if (Reg.text.test(str)) {
             const [ all ] = str.match(Reg.text) || ['']
-            const child = {
-                type: 'div',
-                raw: all,
-                indent: /^ {2,}/.test(all), // 是否需要缩进
-                children: [],
-            }
-            changeCurrentNode(child, () => {
-                handleText(all)
-            })
+            handleText(all)
             slice(all)
 
             next()

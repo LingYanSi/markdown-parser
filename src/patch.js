@@ -19,6 +19,20 @@ class DiffResult {
     }
 }
 
+function delHTMLNode(htmlNode) {
+    if (htmlNode && htmlNode.parentElement) {
+        htmlNode.parentElement.removeChild(htmlNode)
+    }
+    return htmlNode
+}
+
+function insertBefore(newDom, refDom) {
+    if (refDom && refDom.parentElement) {
+        refDom.parentElement.insertBefore(newDom, refDom)
+    }
+    return newDom
+}
+
 /**
  *
  * 对diff结果做patch
@@ -41,10 +55,12 @@ export default function patch(diffResult, $container = document.body) {
         case 'add': {
             trans(nextNode, $container, {
                 beforeAppend(ele) {
-                    if (nextNode.__moveTo !== undefined) {
-                        const { __htmlNode: prevDom } = nextNode.__moveTo
-                        prevDom.parentElement.insertBefore(ele, prevDom)
-                        return true
+                    if (diffResult.moveTo !== undefined) {
+                        const ref = $container.childNodes[diffResult.moveTo]
+                        if (ref) {
+                            insertBefore(ele, ref)
+                            return true
+                        }
                     }
                 }
             })
@@ -56,6 +72,14 @@ export default function patch(diffResult, $container = document.body) {
             const $parent = document.createDocumentFragment()
             trans(nextNode, $parent)
             __htmlNode.parentElement.replaceChild($parent, __htmlNode)
+            break
+        }
+
+        case 'move': {
+            const index = diffResult.moveTo
+            const { prevNode } = diffResult
+            const parent = prevNode.__htmlNode.parentElement
+            insertBefore(prevNode.__htmlNode , parent.childNodes[index])
             break
         }
 
@@ -100,6 +124,7 @@ export default function patch(diffResult, $container = document.body) {
                 }
             })
             children.forEach(diff => patch(diff, __htmlNode))
+
             break
         }
         default: {

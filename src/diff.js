@@ -77,7 +77,7 @@ export function diffNode(prevNode, nextNode) {
     nextNode.__htmlNode = prevNode.__htmlNode
     nextNode.__update = prevNode.__update
 
-    return null;
+    return update;
 }
 
 // 判断数组是否一致
@@ -86,18 +86,75 @@ export function diffArr(prevNode, nextNode) {
     const { children: prevArr = [] } = prevNode
     const { children: nextArr = [] } = nextNode
 
-    const nodeDiffResults = []
+    const addArr = []
+    const delArr = []
+    const moveArr = []
+    const updateArr = []
     // 如果是同type的数组，没有key，把删除第一个元素后，需要整体都在diff一边，如果有key的话，就可以先用key做一遍diff，而不用去diff props与children了
     // [ 1 2 3 4 ] [ 1 1 4 5 ]
     let filterPrevArr = prevArr.filter((item, index) => {
-        // 如果nextArr中存在这个元素，就不删除此元素？ 有bug
-        // 移除已存在的元素
-        if (!nextArr[index] || nextArr[index].type !== item.type) {
-            nodeDiffResults.push(diffNode(item, null))
+        // 如果不存在这个type类型，需要删除
+        if (!nextArr.some(i => i.type === item.type)) {
+            delArr.push(diffNode(item, null))
             return false
         }
         return true
     })
+
+    // 给prevArr按照nextArr中的type类型进行排序
+    let sortPrevArr = []
+    nextArr.forEach((item) => {
+        const isMatch = filterPrevArr.some((ele, index) => {
+            if (ele.type === item.type) {
+                filterPrevArr[index] = { ele, isDel: true }
+                sortPrevArr.push(ele)
+                return true
+            }
+            return false
+        })
+
+        if (!isMatch) {
+            sortPrevArr.push(null)
+        }
+    })
+
+    filterPrevArr.filter(i => !i.isDel).forEach(item => delArr.push(diffNode(item, null)))
+
+    const prevStayArr = filterPrevArr.filter(i => i.isDel).map(i => i.ele)
+
+    nextArr.forEach((item, index) => {
+        const ele = sortPrevArr[index]
+        const prevIndex = prevStayArr.findIndex(i => i === ele)
+        if (!ele) {
+            // 需要新增
+            const result = diffNode(null, item)
+            moveArr.push({
+                ...result,
+                moveTo: index,
+            })
+        } else {
+            // 需要移动/update
+            const result = diffNode(ele, item)
+
+            if (prevIndex !== index) {
+                moveArr.push({
+                    type: 'move',
+                    prevNode: ele,
+                    nextNode: item,
+                    moveTo: index,
+                })
+            }
+
+            updateArr.push(result) // 元素需要先移动
+        }
+    })
+
+    return [
+        ...delArr,
+        ...addArr,
+        ...moveArr,
+        ...updateArr,
+    ]
 
     // 首先来讲filterPrevArr的所有type, nextArr内都是存在的，但可能数量是不一致的
     // [ 1 2 3 ] [ 1 4 3 5 2 ]
@@ -105,45 +162,6 @@ export function diffArr(prevNode, nextNode) {
     // 3 在 [ 2 3 ] 中存在，但是3前面还有2，因此需要move，move到4后面
     // 5 在 [ 2 ] 中不存在, insert after 3
     // 2 早 [ 2 ] 中存在，保持不变
-
-    // 新增
-    nextArr.forEach((item, index) => {
-        const nextType = item.type
-
-        // console.log(filterPrevArr[index] && filterPrevArr[index].type, nextType)
-        // 不存在或者类型一致
-        return nodeDiffResults.push(diffNode(filterPrevArr[index], item))
-        if (!filterPrevArr[index] || filterPrevArr[index].type === nextType) {
-        }
-
-        // 需要移动
-        filterPrevArr = filterPrevArr.filter(prevItem => {
-            if (prevItem.type === nextType) {
-                const diffResult = diffNode(prevItem, item)
-                // move update
-                if (diffResult) {
-                    nodeDiffResults.push({
-                        ...diffResult,
-                        moveTo: nextArr[index - 1],
-                    })
-
-                    console.log('need move node')
-                }
-
-                return false
-            }
-            return true
-        })
-
-        // 如果filterPrevArr中不存在
-        return {
-            type: 'add',
-            nextNode: item,
-            moveTo: nextArr[index - 1],
-        }
-    })
-
-    return nodeDiffResults
 }
 
 // object diff

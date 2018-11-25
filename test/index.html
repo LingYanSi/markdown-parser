@@ -49,6 +49,17 @@
             outline: none;
         }
 
+        #preview {
+            position: fixed;
+            top: 0;
+            right: 100px;
+            padding: 10px;
+            background: inherit;
+            border: none;
+            cursor: pointer;
+            outline: none;
+        }
+
         #full:hover {
             transition: all .3s;
             background: pink;
@@ -61,6 +72,7 @@
         <textarea placeholder="write something" autofocus></textarea>
         <div id="render"></div>
         <button id="full">full</button>
+        <button id="preview">preview</button>
     </div>
     <script type="module">
         import Markdown from '../src/index.js'
@@ -73,6 +85,8 @@
         $('#full').addEventListener('click', () => {
             $('textarea').classList.toggle('hide')
         })
+
+        $('#preview').addEventListener('click', render)
 
         const mk = new Markdown($('#render'))
 

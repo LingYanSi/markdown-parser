@@ -139,7 +139,10 @@ export default function trans(node, $parent, option = {}) {
         case 'ul':
         {
             ele = document.createElement(node.type)
-            ele.style.cssText += `;list-style-type:${node.listStyleType};`
+            node.__update = (key, nodeNode) => {
+                ele.style.cssText += `;list-style-type:${nodeNode[key]};`
+            }
+            node.__update('listStyleType', node)
             break
         }
         default:
