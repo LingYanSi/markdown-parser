@@ -73,12 +73,12 @@ function loadAsset(url) {
  * @param  {HTMLElement}      dom [代码高亮]
  */
 function codeHighlight(dom, config) {
-    Promise.all(config.highlightSource.map(loadAsset))
-        .then((success) => {
-            if (!window.hljs) return
+    Promise.all(config.asset.map(loadAsset))
+        .then(() => {
+            if (!window.hljs || !dom) return
 
             window.hljs.configure({
-            // useBR: true, // 是否使用br
+                // useBR: true, // 是否使用br
                 tabReplace: 4,
             });
 
@@ -86,6 +86,15 @@ function codeHighlight(dom, config) {
                 window.hljs.highlightBlock(code)
             })
         })
+}
+
+function getConfig(initConfig) {
+    return {
+        asset: [], // 代码高亮库加载
+        useHighlight: true, // 是否使用高亮
+        cache: true, // 是否使用缓存
+        ...initConfig,
+    }
 }
 
 export default class Markdown {
@@ -99,20 +108,13 @@ export default class Markdown {
         const result = getParseResult(str)
 
         const diffResult = diffNode(this.prevRoot, result.root)
-        // console.log(this.prevRoot, result.root, diffResult)
 
         this.prevRoot = result.root
         patch(diffResult, this.dom)
         console.log(diffResult)
         console.log('resultRoot::', result.root)
 
-        // trans(result.root.children, dom)
-        const config = {
-            highlightSource: ['/src/theme.css', '/asset/highlight.min.js', '/asset/highlight.theme.atom-one-dark.css'], // 代码高亮库加载
-            useHighlight: true, // 是否使用高亮
-            cache: true, // 是否使用缓存
-            ...this.config,
-        }
+        const config = getConfig(this.config)
         config.useHighlight && codeHighlight(this.dom, config)
     }
 }
@@ -122,10 +124,18 @@ Markdown.trans = trans
 Markdown.getParseResult = getParseResult
 Markdown.codeHighlight = codeHighlight
 
+function markdown($dom, str, config) {
+    const result = getParseResult(str)
+    trans(result.root, this.dom)
+    config = getConfig(config)
+    config.useHighlight && codeHighlight($dom, config)
+}
+
 export {
     Markdown,
     parser,
     trans,
     codeHighlight,
     getParseResult,
+    markdown,
 }

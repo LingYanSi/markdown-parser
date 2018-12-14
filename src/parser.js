@@ -519,6 +519,9 @@ export function parser(str = '') {
             const child = parser(leftStr.replace(/^\s*\n/, ''))
             h.children = child.children
             node.children.push(h)
+            node.children.push({
+                type: 'br',
+            })
             slice(all)
             next()
             return

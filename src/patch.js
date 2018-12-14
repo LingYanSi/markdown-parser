@@ -19,18 +19,21 @@ class DiffResult {
     }
 }
 
-function delHTMLNode(htmlNode) {
-    if (htmlNode && htmlNode.parentElement) {
-        htmlNode.parentElement.removeChild(htmlNode)
-    }
-    return htmlNode
-}
-
 function insertBefore(newDom, refDom) {
     if (refDom && refDom.parentElement) {
         refDom.parentElement.insertBefore(newDom, refDom)
     }
     return newDom
+}
+
+function findIndex(ele) {
+    console.log(ele)
+    const childNodes = ele.parentElement.childNodes
+    for (let i = 0, len = childNodes.length; i < len; i++) {
+        if (childNodes[i] === ele) {
+            return i
+        }
+    }
 }
 
 /**
@@ -55,12 +58,10 @@ export default function patch(diffResult, $container = document.body) {
         case 'add': {
             trans(nextNode, $container, {
                 beforeAppend(ele) {
-                    if (diffResult.moveTo !== undefined) {
-                        const ref = $container.childNodes[diffResult.moveTo]
-                        if (ref) {
-                            insertBefore(ele, ref)
-                            return true
-                        }
+                    const ref = $container.childNodes[diffResult.moveTo]
+                    if (ref) {
+                        insertBefore(ele, ref)
+                        return true
                     }
                 }
             })
@@ -76,10 +77,18 @@ export default function patch(diffResult, $container = document.body) {
         }
 
         case 'move': {
-            const index = diffResult.moveTo
+            let { moveTo } = diffResult
             const { prevNode } = diffResult
             const parent = prevNode.__htmlNode.parentElement
-            insertBefore(prevNode.__htmlNode , parent.childNodes[index])
+
+            // 如果目标元素和当前元素相同，则不用移动
+            if (parent.childNodes[moveTo] !== prevNode.__htmlNode) {
+                if (parent.childNodes[moveTo]) {
+                    insertBefore(prevNode.__htmlNode, parent.childNodes[moveTo])
+                } else {
+                    parent.appendChild(prevNode.__htmlNode)
+                }
+            }
             break
         }
 

@@ -13,7 +13,7 @@ support [highlight](https://github.com/isagalaev/highlight.js)
 
 ```js
 import markdown from 'markdown-parser'
-import 'markdown-parser/src/theme.css'
+// import markdown from 'markdown-parser/asset' // 可选择直接引用highlight静态资源
 
 markdown(dom, str, {
     highlightSource: ['/ddd/ddd/highlight.min.js', '/ddd/ddd/highlight.theme.css'], // 可以传入highlight的相关js/css资源

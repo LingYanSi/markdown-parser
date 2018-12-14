@@ -88,7 +88,9 @@
 
         $('#preview').addEventListener('click', render)
 
-        const mk = new Markdown($('#render'))
+        const mk = new Markdown($('#render'), {
+            asset: ['/asset/theme.css', '/asset/highlight.min.js', '/asset/highlight.theme.atom-one-dark.css'],
+        })
 
         function render() {
             const content = $('textarea').value;
