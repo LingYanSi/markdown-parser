@@ -95,7 +95,7 @@ function getConfig(initConfig) {
     }
 }
 
-export default class Markdown {
+class Markdown {
     constructor(dom, config, str) {
         this.dom = dom
         this.config = config
@@ -123,13 +123,24 @@ Markdown.getParseResult = getParseResult
 Markdown.codeHighlight = codeHighlight
 
 function markdown($dom, str, config) {
+    $dom.innerHTML = ''
+    $dom.classList.add('markdown')
     const result = getParseResult(str)
-    trans(result.root, this.dom)
+    trans(result.root, $dom)
     config = getConfig(config)
     codeHighlight($dom, config)
 }
 
 export {
+    Markdown,
+    parser,
+    trans,
+    codeHighlight,
+    getParseResult,
+    markdown,
+}
+
+export default {
     Markdown,
     parser,
     trans,

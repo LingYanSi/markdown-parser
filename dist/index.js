@@ -18,7 +18,7 @@ Object.defineProperty(exports, "trans", {
     return _trans.default;
   }
 });
-exports.Markdown = exports.default = void 0;
+exports.default = exports.Markdown = void 0;
 
 var _diff = require("./diff.js");
 
@@ -177,15 +177,27 @@ function () {
   return Markdown;
 }();
 
-exports.Markdown = exports.default = Markdown;
+exports.Markdown = Markdown;
 Markdown.parser = _parser.parser;
 Markdown.trans = _trans.default;
 Markdown.getParseResult = getParseResult;
 Markdown.codeHighlight = codeHighlight;
 
 function markdown($dom, str, config) {
+  $dom.innerHTML = '';
+  $dom.classList.add('markdown');
   var result = getParseResult(str);
-  (0, _trans.default)(result.root, this.dom);
+  (0, _trans.default)(result.root, $dom);
   config = getConfig(config);
   codeHighlight($dom, config);
 }
+
+var _default = {
+  Markdown: Markdown,
+  parser: _parser.parser,
+  trans: _trans.default,
+  codeHighlight: codeHighlight,
+  getParseResult: getParseResult,
+  markdown: markdown
+};
+exports.default = _default;

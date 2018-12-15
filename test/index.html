@@ -65,7 +65,6 @@
             background: pink;
         }
     </style>
-    <link rel="stylesheet" href="../src/theme.css">
 </head>
 <body>
     <div class="flex main">
@@ -75,7 +74,7 @@
         <button id="preview">preview</button>
     </div>
     <script type="module">
-        import Markdown from '../src/index.js'
+        import { markdown, Markdown } from '../src/index.js'
         import { diffNode } from '../src/diff.js'
 
         function $(s) {
@@ -95,7 +94,11 @@
         function render() {
             const content = $('textarea').value;
             localStorage.setItem('markdown', content)
-            mk.update(content)
+            // mk.update(content)
+
+            markdown($('#render'), content, {
+                asset: ['/asset/theme.css', '/asset/highlight.min.js', '/asset/highlight.theme.atom-one-dark.css'],
+            })
         }
 
         $('textarea').value = localStorage.getItem('markdown') || ``
