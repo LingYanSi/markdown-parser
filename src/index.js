@@ -91,8 +91,6 @@ function codeHighlight(dom, config) {
 function getConfig(initConfig) {
     return {
         asset: [], // 代码高亮库加载
-        useHighlight: true, // 是否使用高亮
-        cache: true, // 是否使用缓存
         ...initConfig,
     }
 }
@@ -128,7 +126,7 @@ function markdown($dom, str, config) {
     const result = getParseResult(str)
     trans(result.root, this.dom)
     config = getConfig(config)
-    config.useHighlight && codeHighlight($dom, config)
+    codeHighlight($dom, config)
 }
 
 export {

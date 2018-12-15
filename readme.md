@@ -5,19 +5,26 @@
 
 ## use
 ```
-npm i markdown-parser
-yarn add markdown-parser
+npm i lys-markdown-parser
+yarn add lys-markdown-parser
 ```
 
 support [highlight](https://github.com/isagalaev/highlight.js)
 
 ```js
-import markdown from 'markdown-parser'
-// import markdown from 'markdown-parser/asset' // 可选择直接引用highlight静态资源
+import { markdown, Markdown } from 'lys-markdown-parser'
+// import markdown from 'lys-markdown-parser/asset' // 可选择直接引用highlight静态资源
 
 markdown(dom, str, {
-    highlightSource: ['/ddd/ddd/highlight.min.js', '/ddd/ddd/highlight.theme.css'], // 可以传入highlight的相关js/css资源
+    asset: ['/ddd/ddd/highlight.min.js', '/ddd/ddd/highlight.theme.css'], // 可以传入highlight的相关js/css资源
 })
+
+// 启用dom复用，可用在markdown编辑器
+const mk = new Markdown(dom, {
+    asset: [],
+})
+
+mk.update(mkStr)
 ```
 
 ## support rules
