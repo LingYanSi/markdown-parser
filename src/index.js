@@ -139,12 +139,3 @@ export {
     getParseResult,
     markdown,
 }
-
-export default {
-    Markdown,
-    parser,
-    trans,
-    codeHighlight,
-    getParseResult,
-    markdown,
-}
