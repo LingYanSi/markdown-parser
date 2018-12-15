@@ -1,3 +1,35 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.codeHighlight = codeHighlight;
+exports.getParseResult = getParseResult;
+exports.markdown = markdown;
+Object.defineProperty(exports, "parser", {
+  enumerable: true,
+  get: function get() {
+    return _parser.parser;
+  }
+});
+Object.defineProperty(exports, "trans", {
+  enumerable: true,
+  get: function get() {
+    return _trans.default;
+  }
+});
+exports.Markdown = exports.default = void 0;
+
+var _diff = require("./diff.js");
+
+var _parser = require("./parser.js");
+
+var _patch = _interopRequireDefault(require("./patch.js"));
+
+var _trans = _interopRequireDefault(require("./trans.js"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -16,15 +48,10 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-import { diffNode } from './diff.js';
-import { parser } from './parser.js';
-import patch from './patch.js';
-import trans from './trans.js';
 /**
  * 获取Node内的图片、文本信息
  * @param  {Node} node [markdown AST]
  */
-
 function getParserNodeInfo(node) {
   var text = '';
   var imgs = [];
@@ -55,7 +82,7 @@ function getParseResult() {
   var parseResult = cache[str];
 
   if (!parseResult) {
-    var root = parser(str);
+    var root = (0, _parser.parser)(str);
     parseResult = _objectSpread({
       root: root
     }, getParserNodeInfo(root));
@@ -137,9 +164,9 @@ function () {
     value: function update(str) {
       this.dom.classList.add('markdown');
       var result = getParseResult(str);
-      var diffResult = diffNode(this.prevRoot, result.root);
+      var diffResult = (0, _diff.diffNode)(this.prevRoot, result.root);
       this.prevRoot = result.root;
-      patch(diffResult, this.dom);
+      (0, _patch.default)(diffResult, this.dom);
       console.log(diffResult);
       console.log('resultRoot::', result.root);
       var config = getConfig(this.config);
@@ -150,17 +177,15 @@ function () {
   return Markdown;
 }();
 
-export { Markdown as default };
-Markdown.parser = parser;
-Markdown.trans = trans;
+exports.Markdown = exports.default = Markdown;
+Markdown.parser = _parser.parser;
+Markdown.trans = _trans.default;
 Markdown.getParseResult = getParseResult;
 Markdown.codeHighlight = codeHighlight;
 
 function markdown($dom, str, config) {
   var result = getParseResult(str);
-  trans(result.root, this.dom);
+  (0, _trans.default)(result.root, this.dom);
   config = getConfig(config);
   codeHighlight($dom, config);
 }
-
-export { Markdown, parser, trans, codeHighlight, getParseResult, markdown };
