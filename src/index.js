@@ -109,18 +109,11 @@ class Markdown {
 
         this.prevRoot = result.root
         patch(diffResult, this.dom)
-        console.log(diffResult)
-        console.log('resultRoot::', result.root)
 
         const config = getConfig(this.config)
         config.useHighlight && codeHighlight(this.dom, config)
     }
 }
-
-Markdown.parser = parser
-Markdown.trans = trans
-Markdown.getParseResult = getParseResult
-Markdown.codeHighlight = codeHighlight
 
 function markdown($dom, str, config) {
     $dom.innerHTML = ''
@@ -131,6 +124,11 @@ function markdown($dom, str, config) {
     codeHighlight($dom, config)
 }
 
+function markdownInfo(str) {
+    const { root, ...info } = getParseResult(str)
+    return info;
+}
+
 export {
     Markdown,
     parser,
@@ -138,4 +136,5 @@ export {
     codeHighlight,
     getParseResult,
     markdown,
+    markdownInfo, // 获取markdown info 【imgs, text】
 }

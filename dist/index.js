@@ -1,5 +1,9 @@
 'use strict';
 
+function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
+
+function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -1394,8 +1398,6 @@ function () {
       var diffResult = diffNode(this.prevRoot, result.root);
       this.prevRoot = result.root;
       patch(diffResult, this.dom);
-      console.log(diffResult);
-      console.log('resultRoot::', result.root);
       var config = getConfig(this.config);
       config.useHighlight && codeHighlight(this.dom, config);
     }
@@ -1403,11 +1405,6 @@ function () {
 
   return Markdown;
 }();
-
-Markdown.parser = parser;
-Markdown.trans = trans;
-Markdown.getParseResult = getParseResult;
-Markdown.codeHighlight = codeHighlight;
 
 function markdown($dom, str, config) {
   $dom.innerHTML = '';
@@ -1418,9 +1415,18 @@ function markdown($dom, str, config) {
   codeHighlight($dom, config);
 }
 
+function markdownInfo(str) {
+  var _getParseResult = getParseResult(str),
+      root = _getParseResult.root,
+      info = _objectWithoutProperties(_getParseResult, ["root"]);
+
+  return info;
+}
+
 exports.Markdown = Markdown;
 exports.parser = parser;
 exports.trans = trans;
 exports.codeHighlight = codeHighlight;
 exports.getParseResult = getParseResult;
 exports.markdown = markdown;
+exports.markdownInfo = markdownInfo;
