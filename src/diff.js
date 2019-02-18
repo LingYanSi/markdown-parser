@@ -6,15 +6,14 @@
  *  2. children是数组，需要一定的算法
  *
  * diff array
- * 1. 先删除，根据type是否在nextNode里存在
- * 2. diff filterPrevChildren与 nextChildren
- * 如果前后两次是node位置发生变化【比较复杂】
+ * 1. 先删除在nextNode里不存在的type
+ * 2. 保留在nextNode里存在的type
+ * 3. 删除剩余的元素，最后得到 prevKeepArr
+ * 4. nextNode 与 prevKeepArr 最对比，进行move/add操作，
+ *      需要注意的是在获取操作的过程，需要丢prevKeepArr进行同步更新
+ *      不然会导致操作混乱，数据不一致
+ * 5. 返回diff结果
  *
- * 后一次插入了新的nodes【相对简单】
- * [1 2 3 4] [1 2 6 3 4]
- *
- * 每种类型的个数是一致的，那么就是移动
- * 每种类型的个数是不一致的，那么就是
  */
 
 

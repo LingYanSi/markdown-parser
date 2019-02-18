@@ -1,11 +1,14 @@
 {
   "name": "lys-markdown-parser",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "js markdown parser",
   "main": "dist/index.js",
   "scripts": {
     "st": "anywhere -p 9001",
-    "build": "rollup src/index.js --format cjs --file dist/index.js; babel dist --out-dir dist"
+    "build:cjs": "rollup src/index.js --format cjs --file dist/index.js",
+    "build:umd": "rollup src/index.js --format iife --name \"lymd\" --file dist/lymd.min.js",
+    "min": "babel dist --out-dir dist; minify dist/index.umd.js -d dist",
+    "build": "npm run build:cjs; npm run build:umd; npm run min"
   },
   "repository": {
     "type": "git",
@@ -33,6 +36,7 @@
     "@babel/plugin-transform-modules-commonjs": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "anywhere": "^1.5.0",
+    "babel-minify": "^0.5.0",
     "rollup": "^0.67.4"
   }
 }

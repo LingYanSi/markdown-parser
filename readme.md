@@ -27,6 +27,12 @@ const mk = new Markdown(dom, {
 mk.update(mkStr)
 ```
 
+### iief/umd
+在浏览器中直接引用`dist/lymd.min.js`使用
+```js
+lymd.markdown(document.body, `# hello lymd`)
+```
+
 ## support rules
 支持audio/video/iframe
 ```

@@ -20,7 +20,7 @@ export const Reg = {
         return /^>(((?!\n\n)[\s\S])*)\n\n/
     },
     get head() {
-        return /^(#{1,6})([^\n]*)\n?/
+        return /^\s*(#{1,6})([^\n]*)\n?/
     },
     get ul() {
         return /^([-+]\s+((?!\n\n)[\s\S])*)\n\n/

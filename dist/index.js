@@ -301,7 +301,7 @@ var Reg = {
   },
 
   get head() {
-    return /^(#{1,6})([^\n]*)\n?/;
+    return /^\s*(#{1,6})([^\n]*)\n?/;
   },
 
   get ul() {
