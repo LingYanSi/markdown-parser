@@ -36,7 +36,8 @@
     padding: 3px 5px;
     margin: 0 2px;
     border-radius: 2px;
-    white-space: nowrap;
+    /* 自动换行 */
+    white-space: pre-line;
 }
 
 .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5 {
