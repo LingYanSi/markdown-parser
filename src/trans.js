@@ -146,6 +146,11 @@ export default function trans(node, $parent, option = {}) {
             node.__update('listStyleType', node)
             break
         }
+        case 'lineThrough': {
+            ele = document.createElement('span')
+            ele.style.cssText += `;text-decoration: line-through;`
+            break
+        }
         default:
         {
             ele = document.createElement(node.type)

@@ -328,6 +328,10 @@ var Reg = {
     return /^\*{3}(((?!\*{3}).)*)\*{3}/;
   },
 
+  get lineThrough() {
+    return /^~{2}(((?!~{2}).)*)~{2}/;
+  },
+
   get italic() {
     return /^\*{2}(((?!\*{2}).)*)\*{2}/;
   },
@@ -607,6 +611,21 @@ function parser() {
       handleText(textStr.replace(Reg.blod, function (m, $0) {
         var child = {
           type: 'b',
+          children: []
+        };
+        changeCurrentNode(child, function () {
+          handleText($0);
+        });
+        return '';
+      }));
+      return;
+    } // 中划线
+
+
+    if (Reg.lineThrough.test(textStr)) {
+      handleText(textStr.replace(Reg.lineThrough, function (m, $0) {
+        var child = {
+          type: 'lineThrough',
           children: []
         };
         changeCurrentNode(child, function () {
@@ -1253,6 +1272,13 @@ function trans(node, $parent) {
 
         node.__update('listStyleType', node);
 
+        break;
+      }
+
+    case 'lineThrough':
+      {
+        ele = document.createElement('span');
+        ele.style.cssText += ";text-decoration: line-through;";
         break;
       }
 

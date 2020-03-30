@@ -41,6 +41,9 @@ export const Reg = {
     get blod() {
         return /^\*{3}(((?!\*{3}).)*)\*{3}/
     },
+    get lineThrough() {
+        return /^~{2}(((?!~{2}).)*)~{2}/
+    },
     get italic() {
         return /^\*{2}(((?!\*{2}).)*)\*{2}/
     },
@@ -294,6 +297,21 @@ export function parser(str = '') {
             handleText(textStr.replace(Reg.blod, (m, $0) => {
                 const child = {
                     type: 'b',
+                    children: [],
+                }
+                changeCurrentNode(child, () => {
+                    handleText($0)
+                })
+                return ''
+            }))
+            return
+        }
+
+        // 中划线
+        if (Reg.lineThrough.test(textStr)) {
+            handleText(textStr.replace(Reg.lineThrough, (m, $0) => {
+                const child = {
+                    type: 'lineThrough',
                     children: [],
                 }
                 changeCurrentNode(child, () => {
