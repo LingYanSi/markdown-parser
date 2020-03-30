@@ -1,6 +1,6 @@
 {
   "name": "lys-markdown-parser",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "js markdown parser",
   "main": "dist/index.js",
   "scripts": {
