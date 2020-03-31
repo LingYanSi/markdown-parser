@@ -10,27 +10,26 @@
  */
 
 export const Reg = {
-    get hr() {
-        return /(^-{3,}[^\n]+\n?)/
-    },
-    get code() {
-        return /^`{3}(((?!```)[\s\S])*)`{3}/
-    },
+    // > 引用
     get queto() {
         return /^>(((?!\n\n)[\s\S])*)\n\n/
     },
+    // # 标题
     get head() {
         return /^\s*(#{1,6})([^\n]*)\n?/
     },
+    // - 无序list
+    // + 有序list
     get ul() {
         return /^([-+]\s+((?!\n\n)[\s\S])*)\n\n/
     },
-    get url() {
-        return /^\[([^\]]+)\]\(([^)]+)\)/
-    },
-    // 行内code
+    // `行内code`
     get inlineCode() {
         return /^`([^`]*)`/
+    },
+    // ```代码块```
+    get code() {
+        return /^`{3}(((?!```)[\s\S])*)`{3}/
     },
     get br() {
         return /^\n/
@@ -38,27 +37,42 @@ export const Reg = {
     get text() {
         return /^[^\n]*\n?/
     },
+    // --- 分割线
+    get hr() {
+        return /(^-{3,}[^\n]+\n?)/
+    },
+    // ~~中划线~~
     get lineThrough() {
         return /^~{2}(((?!~{2}).)*)~{2}/
     },
+    // *倾斜*
     get italic() {
         return /^\*(((?!\*).)*)\*/
     },
+    // **加粗**
     get blod() {
         // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
         return /^\*{2}(((?!\*{2}).)*)\*{2}/
     },
+    // * [] 待完成事项
     get todoItem() {
         return /^\*\ +\[(x?)\]\ +/
     },
+    // !!![视频](url)
     get video() {
         return /^!{3}\[([^\]]*)\]\(([^)]+)\)/
     },
+    // !![音频](url)
     get audio() {
         return /^!{2}\[([^\]]*)\]\(([^)]+)\)/
     },
+    // ![图片](url)
     get img() {
         return /^!\[([^\]]*)\]\(([^)]+)\)/
+    },
+    // [连接描述](url地址)
+    get url() {
+        return /^\[([^\]]+)\]\(([^)]+)\)/
     },
 }
 
