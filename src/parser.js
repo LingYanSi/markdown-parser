@@ -38,14 +38,18 @@ export const Reg = {
     get text() {
         return /^[^\n]*\n?/
     },
-    get blod() {
-        return /^\*{3}(((?!\*{3}).)*)\*{3}/
-    },
     get lineThrough() {
         return /^~{2}(((?!~{2}).)*)~{2}/
     },
     get italic() {
+        return /^\*(((?!\*).)*)\*/
+    },
+    get blod() {
+        // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
         return /^\*{2}(((?!\*{2}).)*)\*{2}/
+    },
+    get todoItem() {
+        return /^\*\ +\[(x?)\]\ +/
     },
     get video() {
         return /^!{3}\[([^\]]*)\]\(([^)]+)\)/
@@ -581,6 +585,20 @@ export function parser(str = '') {
 
         // tbale
         if (str.match(/.+\n/) && /\|.+\|/.test(str.match(/.+\n/)[0].trim()) && parseTable(str)) {
+            next()
+            return
+        }
+
+        if (Reg.todoItem.test(str)) {
+            const [all] = str.match(Reg.todoItem) || []
+            console.log(all, str)
+            if (all !== undefined) {
+                node.children.push({
+                    type: 'todoItem',
+                    checked: all.includes('x'),
+                })
+            }
+            slice(all)
             next()
             return
         }

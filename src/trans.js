@@ -151,6 +151,12 @@ export default function trans(node, $parent, option = {}) {
             ele.style.cssText += `;text-decoration: line-through;`
             break
         }
+        case 'todoItem': {
+            ele = document.createElement('input')
+            ele.type = 'checkbox'
+            ele.checked = node.checked
+            break
+        }
         default:
         {
             ele = document.createElement(node.type)

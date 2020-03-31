@@ -324,16 +324,21 @@ var Reg = {
     return /^[^\n]*\n?/;
   },
 
-  get blod() {
-    return /^\*{3}(((?!\*{3}).)*)\*{3}/;
-  },
-
   get lineThrough() {
     return /^~{2}(((?!~{2}).)*)~{2}/;
   },
 
   get italic() {
+    return /^\*(((?!\*).)*)\*/;
+  },
+
+  get blod() {
+    // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
     return /^\*{2}(((?!\*{2}).)*)\*{2}/;
+  },
+
+  get todoItem() {
+    return /^\*\ +\[(x?)\]\ +/;
   },
 
   get video() {
@@ -936,34 +941,53 @@ function parser() {
     if (str.match(/.+\n/) && /\|.+\|/.test(str.match(/.+\n/)[0].trim()) && parseTable(str)) {
       next();
       return;
-    } // hr
+    }
 
-
-    if (Reg.hr.test(str)) {
-      var _ref3 = str.match(Reg.hr) || [],
+    if (Reg.todoItem.test(str)) {
+      var _ref3 = str.match(Reg.todoItem) || [],
           _ref4 = _slicedToArray(_ref3, 1),
           _all5 = _ref4[0];
 
+      console.log(_all5, str);
+
       if (_all5 !== undefined) {
         node.children.push({
-          type: 'hr',
-          children: []
+          type: 'todoItem',
+          checked: _all5.includes('x')
         });
       }
 
       slice(_all5);
       next();
       return;
+    } // hr
+
+
+    if (Reg.hr.test(str)) {
+      var _ref5 = str.match(Reg.hr) || [],
+          _ref6 = _slicedToArray(_ref5, 1),
+          _all6 = _ref6[0];
+
+      if (_all6 !== undefined) {
+        node.children.push({
+          type: 'hr',
+          children: []
+        });
+      }
+
+      slice(_all6);
+      next();
+      return;
     } // 单行text
 
 
     if (Reg.text.test(str)) {
-      var _ref5 = str.match(Reg.text) || [''],
-          _ref6 = _slicedToArray(_ref5, 1),
-          _all6 = _ref6[0];
+      var _ref7 = str.match(Reg.text) || [''],
+          _ref8 = _slicedToArray(_ref7, 1),
+          _all7 = _ref8[0];
 
-      handleText(_all6);
-      slice(_all6);
+      handleText(_all7);
+      slice(_all7);
       next();
       return;
     }
@@ -1282,6 +1306,14 @@ function trans(node, $parent) {
         break;
       }
 
+    case 'todoItem':
+      {
+        ele = document.createElement('input');
+        ele.type = 'checkbox';
+        ele.checked = node.checked;
+        break;
+      }
+
     default:
       {
         ele = document.createElement(node.type);
@@ -1435,6 +1467,7 @@ function markdown($dom, str, config) {
   $dom.innerHTML = '';
   $dom.classList.add('markdown');
   var result = getParseResult(str);
+  console.log(result);
   trans(result.root, $dom);
   config = getConfig(config);
   codeHighlight($dom, config);

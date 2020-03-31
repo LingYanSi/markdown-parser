@@ -119,6 +119,7 @@ function markdown($dom, str, config) {
     $dom.innerHTML = ''
     $dom.classList.add('markdown')
     const result = getParseResult(str)
+    console.log(result)
     trans(result.root, $dom)
     config = getConfig(config)
     codeHighlight($dom, config)
