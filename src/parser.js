@@ -39,7 +39,7 @@ export const Reg = {
     },
     // --- 分割线
     get hr() {
-        return /(^-{3,}[^\n]+\n?)/
+        return /(^-{3,}\n)/
     },
     // ~~中划线~~
     get lineThrough() {
@@ -54,9 +54,10 @@ export const Reg = {
         // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
         return /^\*{2}(((?!\*{2}).)*)\*{2}/
     },
-    // * [] 待完成事项
+    // - [] 待完成事项
+    // - [x] 完成事情
     get todoItem() {
-        return /^\*\ +\[(x?)\]\ +/
+        return /^-\ \[(x?|\s*)\]\ +/
     },
     // !!![视频](url)
     get video() {
@@ -169,7 +170,7 @@ export function parser(str = '') {
     }
 
     /*
-        格式
+        格式支持，两端的|可以不写
         |西溪|sss|
         |---|---|
         |sdfsad|sdfasdf|
@@ -186,8 +187,10 @@ export function parser(str = '') {
         function getLineContent(str = '', lineNum = 0) {
             const line = str.split('\n')[lineNum].trim()
             // 判断是否符合以 |开头 |结尾
-            if (/^\|.+\|$/.test(line)) {
-                return line.split('|').slice(1, -1)
+            if (/\|/.test(line)) {
+                return line.trim()
+                    .replace(/^\||\|$/g, '')
+                    .split('|')
             }
             return []
         }
@@ -196,7 +199,11 @@ export function parser(str = '') {
 
         const LEN = head.length
         // 判断是否相等，split需要符合/^-+$/规则
-        if (LEN == 0 || head.length != split.length || !split.every(item => /^-+$/.test(item.replace(/\s/g, '')))) {
+        if (
+            LEN == 0
+            || head.length != split.length
+            || !split.every(item => /^-+$/.test(item.replace(/\s/g, '')))
+        ) {
             return
         }
 
@@ -218,15 +225,17 @@ export function parser(str = '') {
                         children: [],
                     }
                     changeCurrentNode(tr, () => {
-                        $0.trim().split('|').slice(1, -1).map((item) => {
-                            const th = {
-                                type: 'th',
-                                children: [],
-                            }
-                            changeCurrentNode(th, () => {
-                                handleText(item)
+                        $0.trim().replace(/^\||\|$/g, '')
+                            .split('|')
+                            .map((item) => {
+                                const th = {
+                                    type: 'th',
+                                    children: [],
+                                }
+                                changeCurrentNode(th, () => {
+                                    handleText(item)
+                                })
                             })
-                        })
                     })
                 })
                 return ''
@@ -580,6 +589,20 @@ export function parser(str = '') {
             return
         }
 
+        if (Reg.todoItem.test(str)) {
+            const [all] = str.match(Reg.todoItem) || []
+            console.log(all, str)
+            if (all !== undefined) {
+                node.children.push({
+                    type: 'todoItem',
+                    checked: all.includes('x'),
+                })
+            }
+            slice(all)
+            next()
+            return
+        }
+
         // ul
         if (Reg.ul.test(str)) {
             const [all, match] = str.match(Reg.ul)
@@ -599,20 +622,6 @@ export function parser(str = '') {
 
         // tbale
         if (str.match(/.+\n/) && /\|.+\|/.test(str.match(/.+\n/)[0].trim()) && parseTable(str)) {
-            next()
-            return
-        }
-
-        if (Reg.todoItem.test(str)) {
-            const [all] = str.match(Reg.todoItem) || []
-            console.log(all, str)
-            if (all !== undefined) {
-                node.children.push({
-                    type: 'todoItem',
-                    checked: all.includes('x'),
-                })
-            }
-            slice(all)
             next()
             return
         }

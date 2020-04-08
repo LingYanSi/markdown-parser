@@ -1,4 +1,5 @@
 # Markdown Parser
+实现了[github markdown规范](https://guides.github.com/features/mastering-markdown/)
 
 ## demo
 [click here](https://lingyansi.github.io/markdown-parser/test/)
