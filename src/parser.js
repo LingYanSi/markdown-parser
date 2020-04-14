@@ -177,6 +177,10 @@ export function parser(str = '') {
     */
     // 解析table
     function parseTable() {
+        const [headStr = '', splitStr = ''] = str.split('\n')
+
+        if (!headStr || !splitStr) return false
+
         /**
          * [getLineContent 获取指定字符串的指定行]
          * @method getLineContent
@@ -184,8 +188,7 @@ export function parser(str = '') {
          * @param  {Number}       [lineNum=0] [description]
          * @return {Array}                   [description]
          */
-        function getLineContent(str = '', lineNum = 0) {
-            const line = str.split('\n')[lineNum].trim()
+        function getLineContent(line) {
             // 判断是否符合以 |开头 |结尾
             if (/\|/.test(line)) {
                 return line.trim()
@@ -194,14 +197,15 @@ export function parser(str = '') {
             }
             return []
         }
-        const head = getLineContent(str, 0)
-        const split = getLineContent(str, 1)
+        const head = getLineContent(headStr)
+        const split = getLineContent(splitStr)
 
         const LEN = head.length
         // 判断是否相等，split需要符合/^-+$/规则
         if (
             LEN == 0
             || head.length != split.length
+             // 每个元素要满足 是【-】的重复存在
             || !split.every(item => /^-+$/.test(item.replace(/\s/g, '')))
         ) {
             return
@@ -621,7 +625,7 @@ export function parser(str = '') {
         }
 
         // tbale
-        if (str.match(/.+\n/) && /\|.+\|/.test(str.match(/.+\n/)[0].trim()) && parseTable(str)) {
+        if (parseTable(str)) {
             next()
             return
         }
