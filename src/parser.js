@@ -57,7 +57,7 @@ export const Reg = {
     // - [] 待完成事项
     // - [x] 完成事情
     get todoItem() {
-        return /^-\ \[(x?|\s*)\]\ +/
+        return /^-\ +\[\s*(x?)\s*\]\ +/
     },
     // !!![视频](url)
     get video() {
