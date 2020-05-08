@@ -87,17 +87,21 @@
 
         $('#preview').addEventListener('click', render)
 
-        const mk = new Markdown($('#render'), {
-            asset: ['/asset/theme.css', '/asset/highlight.min.js', '/asset/highlight.theme.atom-one-dark.css'],
-        })
-
         function render() {
             const content = $('textarea').value;
             localStorage.setItem('markdown', content)
-            // mk.update(content)
 
             markdown($('#render'), content, {
-                asset: ['/asset/theme.css', '/asset/highlight.min.js', '/asset/highlight.theme.atom-one-dark.css'],
+                asset: [
+                    '/asset/theme.css',
+                    '/asset/highlight.min.js',
+                    '/asset/highlight.theme.atom-one-dark.css'
+                ].map(i => {
+                    if (location.hostname.includes('github')) {
+                        return `/markdown-parser${i}`
+                    }
+                    return i;
+                }),
             })
         }
 
