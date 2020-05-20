@@ -15,16 +15,12 @@ function getText(node, str = '') {
     return str
 }
 
-class ASTNode {
-    constructor() {
-        this.type = ''
-        this.children = []
-        this.src = ''
-        this.alt = ''
-        this.language = ''
-        this.value = ''
-    }
-}
+/**@typedef {import("../@type").ASTNode} ASTNode */
+
+// 支持ssr
+// 抽象的操作 移动/删除/update
+// 为什么呢？因为比如有些type video，我们想使用一个组件来实现，而非一个html标签来实现
+// 所谓的渲染到多端
 
 /**
  * AST 转 dom
@@ -130,11 +126,12 @@ export default function trans(node, $parent, option = {}) {
         case 'h1':
         {
             ele = document.createElement(node.type)
-            const a = document.createElement('a')
-            const id = getText(node)
-            a.href = `#${id}`
-            a.id = id
-            ele.appendChild(a)
+            // 添加一个
+            // const a = document.createElement('a')
+            // const id = getText(node)
+            // a.href = `#${id}`
+            // a.id = id
+            // ele.appendChild(a)
             break
         }
         case 'ul':
@@ -171,8 +168,9 @@ export default function trans(node, $parent, option = {}) {
     node.tag && ele.setAttribute('tag', node.tag)
     node.children && node.children.forEach(child => trans(child, ele))
 
-    const notAppend = option.beforeAppend && option.beforeAppend(ele)
-    !notAppend && $parent.appendChild(ele)
+    if (!(option.beforeAppend && option.beforeAppend(ele))) {
+        $parent.appendChild(ele)
+    }
     node.__htmlNode = ele
 
     return ele

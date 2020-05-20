@@ -4,7 +4,7 @@ import patch from './patch.js'
 import trans from './trans.js'
 
 /**
- * 获取Node内的图片、文本信息
+ * 遍历节点获取Node内的图片、文本信息
  * @param  {Node} node [markdown AST]
  */
 function getParserNodeInfo(node) {
@@ -100,6 +100,10 @@ class Markdown {
         this.dom = dom
         this.config = config
         this.prevRoot = null
+
+        if (str) {
+            this.update(str)
+        }
     }
     update(str) {
         this.dom.classList.add('markdown')
@@ -107,11 +111,13 @@ class Markdown {
 
         const diffResult = diffNode(this.prevRoot, result.root)
 
+        console.log(diffResult, result.root)
+
         this.prevRoot = result.root
         patch(diffResult, this.dom)
 
         const config = getConfig(this.config)
-        config.useHighlight && codeHighlight(this.dom, config)
+        codeHighlight(this.dom, config)
     }
 }
 

@@ -9,6 +9,8 @@
  * 如果不以 #{1,6} - > ``` 开头表明就是字符串
  */
 
+/** @typedef {import("./../@type/index").AST} AST */
+
 export const Reg = {
     // > 引用
     get queto() {
@@ -77,6 +79,13 @@ export const Reg = {
     },
 }
 
+/**
+ * 获取指定字符串的匹配结果，支持循环嵌套
+ * @param {string} [str='']
+ * @param {string} [startTag='[']
+ * @param {string} [endTag=']']
+ * @returns
+ */
 function getMatchResult(str = '', startTag = '[', endTag = ']') {
     let index = 0
     let startIndex = -1
@@ -132,9 +141,9 @@ function splitChar(str = '', char = '') {
  * @param  {String} [str=''] [description]
  * @return {AST}          [ast tree]
  */
-export function parser(str = '') {
+export function parser(str = '', defaultNode = null ) {
     str += '\n\n'
-    let node = {
+    let node = defaultNode || {
         children: [],
         type: 'root',
     }
@@ -147,11 +156,10 @@ export function parser(str = '') {
      */
     function changeCurrentNode(child, callback, options = {}) {
         const { isPush = true } = options
-        const cacheNode = node
-        node = child
         child.__parent = node
+        node = child
         callback && callback()
-        node = cacheNode
+        node = child.__parent
         isPush && node.children.push(child)
     }
 
@@ -386,12 +394,11 @@ export function parser(str = '') {
         // 视频
         if (Reg.video.test(textStr)) {
             handleText(textStr.replace(Reg.video, (m, $alt, $src) => {
-                const child = {
+                changeCurrentNode({
                     type: 'video',
                     src: $src,
                     alt: $alt,
-                }
-                node.children.push(child)
+                })
                 return ''
             }))
             return
@@ -400,12 +407,11 @@ export function parser(str = '') {
         // 音频
         if (Reg.audio.test(textStr)) {
             textStr = textStr.replace(Reg.audio, (m, $alt, $src) => {
-                const child = {
+                changeCurrentNode({
                     type: 'audio',
                     src: $src,
                     alt: $alt,
-                }
-                node.children.push(child)
+                })
                 return ''
             })
             handleText(textStr)
@@ -415,12 +421,11 @@ export function parser(str = '') {
         // 图片
         if (Reg.img.test(textStr)) {
             handleText(textStr.replace(Reg.img, (m, $alt, $src) => {
-                const child = {
+                changeCurrentNode({
                     type: 'img',
                     src: $src,
                     alt: $alt,
-                }
-                node.children.push(child)
+                })
                 return ''
             }))
             return
@@ -428,7 +433,7 @@ export function parser(str = '') {
 
         // 换行
         if (textStr[0] == '\n') {
-            node.children.push({ type: 'br' })
+            changeCurrentNode({ type: 'br' })
             handleText(textStr.slice(1))
             return
         }
@@ -438,7 +443,7 @@ export function parser(str = '') {
         if (lastChild && lastChild.type === 'text') {
             lastChild.value += textStr[0]
         } else {
-            node.children.push({
+            changeCurrentNode({
                 type: 'text',
                 value: handleTranslationCode(textStr[0]),
             })
@@ -534,7 +539,7 @@ export function parser(str = '') {
         // 换行符
         if (/Reg.br/.test(str)) {
             const [all] = str.match(Reg.br)
-            node.children.push({ type: 'br' })
+            changeCurrentNode({ type: 'br' })
             slice(all)
             next()
             return
@@ -565,10 +570,10 @@ export function parser(str = '') {
                 tag,
                 children: [],
             }
-            const child = parser(leftStr.replace(/^\s*\n/, ''))
-            h.children = child.children
-            node.children.push(h)
-            node.children.push({
+            changeCurrentNode(h)
+            h.children= parser(leftStr.replace(/^\s*\n/, ''), h).children
+
+            changeCurrentNode({
                 type: 'br',
             })
             slice(all)
@@ -581,7 +586,7 @@ export function parser(str = '') {
             const [all, match] = str.match(Reg.code)
             const [language, value] = splitChar(match, '\n').map(i => i.trim())
 
-            node.children.push({
+            changeCurrentNode({
                 type: 'code',
                 language,
                 value,
@@ -595,9 +600,8 @@ export function parser(str = '') {
 
         if (Reg.todoItem.test(str)) {
             const [all] = str.match(Reg.todoItem) || []
-            console.log(all, str)
             if (all !== undefined) {
-                node.children.push({
+                changeCurrentNode({
                     type: 'todoItem',
                     checked: all.includes('x'),
                 })
@@ -614,7 +618,7 @@ export function parser(str = '') {
                 handleUl(match)
             }, { isPush: false })
 
-            node.children.push({
+            changeCurrentNode({
                 type: 'br',
             })
 
@@ -634,7 +638,7 @@ export function parser(str = '') {
         if (Reg.hr.test(str)) {
             const [all] = str.match(Reg.hr) || []
             if (all !== undefined) {
-                node.children.push({
+                changeCurrentNode({
                     type: 'hr',
                     children: [],
                 })
