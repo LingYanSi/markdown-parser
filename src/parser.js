@@ -1,3 +1,5 @@
+import { parseTable, parseBlockCode, parseUL } from './tokenizer.js'
+
 /*
  * 1. 关键字 \n# \n- \n+ \n ```language ```
  * queto: \n> \n\n结束
@@ -7,6 +9,8 @@
  * 对于table的支持
  * \n|--|--|--|
  * 如果不以 #{1,6} - > ``` 开头表明就是字符串
+ * 简单的东西，当然可以正则搞定
+ * 但目前来看markdown还是需要做一点语法分析的
  */
 
 /** @typedef {import("./../@type/index").AST} AST */
@@ -31,7 +35,7 @@ export const Reg = {
     },
     // ```代码块```
     get code() {
-        return /^`{3}(((?!```)[\s\S])*)`{3}/
+        return /^`{3}\n(((?!```)[\s\S])*)\n`{3}/
     },
     get br() {
         return /^\n/
@@ -135,6 +139,16 @@ function splitChar(str = '', char = '') {
     ]
 }
 
+// 判断是否匹配到 h ul code queto
+function testTableIsEnd(STR) {
+    return [
+        Reg.head, // 标题 H
+        Reg.ul, // list
+        Reg.code, // code
+        Reg.queto, // 引用
+    ].some(regexp => regexp.test(STR))
+}
+
 /**
  * [parser 获取AST]
  * @method parser
@@ -149,7 +163,7 @@ export function parser(str = '', defaultNode = null ) {
     }
 
     /**
-     * 更改当前node
+     * 更改切换上下文，方便快速添加children
      * @method changeCurrentNode
      * @param  {Object}          child    [需要切换到的node]
      * @param  {Function}        callback [切换后需要执行的callback]
@@ -161,146 +175,11 @@ export function parser(str = '', defaultNode = null ) {
         callback && callback()
         node = child.__parent
         isPush && node.children.push(child)
+        return node
     }
 
     function slice(all = '') {
         str = str.slice(all.length)
-    }
-
-    // 判断是否匹配到 h ul code queto
-    function testTableIsEnd(STR) {
-        return [
-            Reg.head, // 标题 H
-            Reg.ul, // list
-            Reg.code, // code
-            Reg.queto, // 引用
-        ].some(regexp => regexp.test(STR))
-    }
-
-    /*
-        格式支持，两端的|可以不写
-        |西溪|sss|
-        |---|---|
-        |sdfsad|sdfasdf|
-    */
-    // 解析table
-    function parseTable() {
-        const [headStr = '', splitStr = ''] = str.split('\n')
-
-        if (!headStr || !splitStr) return false
-
-        /**
-         * [getLineContent 获取指定字符串的指定行]
-         * @method getLineContent
-         * @param  {String}       [str='']    [description]
-         * @param  {Number}       [lineNum=0] [description]
-         * @return {Array}                   [description]
-         */
-        function getLineContent(line) {
-            // 判断是否符合以 |开头 |结尾
-            if (/\|/.test(line)) {
-                return line.trim()
-                    .replace(/^\||\|$/g, '')
-                    .split('|')
-            }
-            return []
-        }
-        const head = getLineContent(headStr)
-        const split = getLineContent(splitStr)
-
-        const LEN = head.length
-        // 判断是否相等，split需要符合/^-+$/规则
-        if (
-            LEN == 0
-            || head.length != split.length
-             // 每个元素要满足 是【-】的重复存在
-            || !split.every(item => /^-+$/.test(item.replace(/\s/g, '')))
-        ) {
-            return
-        }
-
-        const table = {
-            type: 'table',
-            children: [],
-        }
-
-        changeCurrentNode(table, () => {
-            // thead
-            str = str.replace(/(.+)\n?/, (m, $0) => {
-                const thead = {
-                    type: 'thead',
-                    children: [],
-                }
-                changeCurrentNode(thead, () => {
-                    const tr = {
-                        type: 'tr',
-                        children: [],
-                    }
-                    changeCurrentNode(tr, () => {
-                        $0.trim().replace(/^\||\|$/g, '')
-                            .split('|')
-                            .map((item) => {
-                                const th = {
-                                    type: 'th',
-                                    children: [],
-                                }
-                                changeCurrentNode(th, () => {
-                                    handleText(item)
-                                })
-                            })
-                    })
-                })
-                return ''
-            })
-            str = str.replace(/.+\n?/, '')
-
-            // tbody
-            const tbody = {
-                type: 'tbody',
-                children: [],
-            }
-
-            changeCurrentNode(tbody, () => {
-                const isNotEnd = true
-
-                while (isNotEnd) {
-                    const line = (str.match(/^.+\n?/) || [])[0]
-                    // 没有匹配到
-                    if (!line) {
-                        break
-                    }
-                    // 匹配到其他块级元素
-                    if (testTableIsEnd(line)) {
-                        break
-                    } else {
-                        str = str.replace(line, '')
-                        const child = {
-                            type: 'tr',
-                            children: [],
-                        }
-                        changeCurrentNode(child, () => {
-                            let arr = line.trim().split('|')
-                            arr = arr[0]
-                                ? arr.slice(0, LEN)
-                                : arr.slice(1).slice(0, LEN)
-                            // 补全数组
-                            arr.push(...Array(LEN - arr.length).fill(''))
-                            arr.forEach((item) => {
-                                const child = {
-                                    type: 'td',
-                                    children: [],
-                                }
-                                changeCurrentNode(child, () => {
-                                    handleText(item)
-                                })
-                            })
-                        })
-                    }
-                }
-            })
-        })
-
-        return true
     }
 
     /**
@@ -309,7 +188,7 @@ export function parser(str = '', defaultNode = null ) {
      * @param  {string}   [textStr=''] [description]
      */
     function handleText(textStr = '') {
-        if (!textStr) {
+        if (!textStr || typeof textStr !== 'string') {
             return
         }
 
@@ -460,72 +339,6 @@ export function parser(str = '', defaultNode = null ) {
             .replace(/\\\*/g, '*')
     }
 
-    /**
-     * [handleUl 处理list字符串]
-     * @method handleUl
-     * @param  {String} [str=''] [description]
-     */
-    function handleUl(ulStr = '') {
-        ulStr = `${ulStr}\n`
-        // 根据$space去识别嵌套
-        // 按行处理
-        const SPACE_PER = 5 // SPACE_PER 表示一个层级
-        const LIST_STYLES = [
-            'disc', // 实心圆
-            'circle', // 空心圆
-            'square', // 方块
-        ]
-        const DECIMAL = 'decimal'
-
-        function next(currentDeep = -1) {
-            if (!ulStr) return
-            const line = (ulStr.match(/.+\n?/) || [])[0]
-            const space = line.match(/\s*/)[0]
-            const DEEP = Math.floor(space.length / SPACE_PER)
-
-            if (/^[-+]\s+/.test(line.trim())) {
-                // 如果是加号，表示是一个有序列表
-                const IS_PLUS = line.match(/\s*[-+]/)[0].trim() == '+'
-                if (DEEP == currentDeep + 1) {
-                    // 如果当前行属于新行，就如下一个ul
-                    const child = {
-                        type: 'ul',
-                        listStyleType: IS_PLUS ? DECIMAL : LIST_STYLES[DEEP % (LIST_STYLES.length)],
-                        children: [],
-                    }
-                    changeCurrentNode(child, () => {
-                        next(currentDeep + 1)
-                    })
-                    next(currentDeep)
-                    return
-                } else if (DEEP == currentDeep) {
-                    const child = {
-                        type: 'li',
-                        children: [],
-                    }
-                    // 添加子li
-                    changeCurrentNode(child, () => {
-                        handleText(line.replace(/\s*[-+]\s*/, ''))
-                    })
-                    ulStr = ulStr.slice(line.length)
-                    next(currentDeep)
-                    return
-                } else if (DEEP < currentDeep) {
-                    // 返回到父节点
-                    return
-                }
-            }
-
-            const child = node.children[node.children.length - 1]
-            changeCurrentNode(child, () => {
-                handleText(line)
-            }, { isPush: false })
-            ulStr = ulStr.slice(line.length)
-            next(currentDeep)
-        }
-        next()
-    }
-
     // 迭代器
     function next() {
         if (/^\n{1,2}$/.test(str)) {
@@ -537,7 +350,7 @@ export function parser(str = '', defaultNode = null ) {
         }
 
         // 换行符
-        if (/Reg.br/.test(str)) {
+        if (Reg.br.test(str)) {
             const [all] = str.match(Reg.br)
             changeCurrentNode({ type: 'br' })
             slice(all)
@@ -582,18 +395,14 @@ export function parser(str = '', defaultNode = null ) {
         }
 
         // code
-        if (Reg.code.test(str)) {
-            const [all, match] = str.match(Reg.code)
-            const [language, value] = splitChar(match, '\n').map(i => i.trim())
-
+        if (parseBlockCode(str, ({ language, content, raw }) => {
             changeCurrentNode({
                 type: 'code',
                 language,
-                value,
+                value: content,
             })
-
-            slice(all)
-
+            slice(raw)
+        })) {
             next()
             return
         }
@@ -611,25 +420,77 @@ export function parser(str = '', defaultNode = null ) {
             return
         }
 
-        // ul
-        if (Reg.ul.test(str)) {
-            const [all, match] = str.match(Reg.ul)
-            changeCurrentNode(node, () => {
-                handleUl(match)
-            }, { isPush: false })
+        if (parseUL(str, ({ raw, list }) => {
+            const LIST_STYLES = [
+                'disc', // 实心圆
+                'circle', // 空心圆
+                'square', // 方块
+            ]
+            const DECIMAL = 'decimal'
 
-            changeCurrentNode({
-                type: 'br',
-            })
+            const xx = (ul) => {
+                const { children, deep } = ul
 
-            slice(all)
+                const child = {
+                    type: 'ul',
+                    listStyleType: children[0].char === '+' ? DECIMAL : LIST_STYLES[deep % (LIST_STYLES.length)],
+                    children: [],
+                }
 
+                changeCurrentNode(child, () => {
+                    children.forEach(item => {
+                        changeCurrentNode({ type: 'li', children: [], }, () => {
+                            item.children.forEach((line) => {
+                                handleText(line)
+                            })
+                            item.ul.children.length && xx(item.ul)
+                        })
+                    })
+                })
+            }
+
+            xx(list)
+
+
+            slice(raw)
+        })) {
             next()
             return
         }
 
         // tbale
-        if (parseTable(str)) {
+        if (parseTable(str, (result) => {
+            changeCurrentNode({ type: 'table', children: [], }, () => {
+                // table头
+                changeCurrentNode({ type: 'thead', children: [], }, () => {
+                    changeCurrentNode({ type: 'tr', children: [], }, () => {
+                        result.table.head.forEach(item => {
+                            changeCurrentNode({ type: 'th', children: [], }, () => {
+                                handleText(item)
+                            })
+                        })
+                    })
+                })
+
+                changeCurrentNode({ type: 'tbody', children: [], }, () => {
+                    result.table.body.forEach(item => {
+                        changeCurrentNode({ type: 'tr', children: [], }, () => {
+                            item.forEach(item => {
+                                changeCurrentNode({ type: 'th', children: [], }, () => {
+                                    handleText(item)
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+
+            changeCurrentNode({
+                type: 'br',
+            })
+
+            slice(result.raw)
+        })) {
             next()
             return
         }

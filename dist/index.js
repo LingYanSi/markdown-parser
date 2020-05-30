@@ -274,6 +274,246 @@ function diffArr(prevNode, nextNode) {
   // 5 在 [ 2 ] 中不存在, insert after 3
   // 2 早 [ 2 ] 中存在，保持不变
 }
+
+function getNextLine(ss) {
+  var index = ss.indexOf('\n');
+
+  if (index > -1) {
+    return [ss.slice(0, index + 1), ss.slice(index + 1)];
+  }
+
+  return [ss, ''];
+}
+
+function parseBlockCode() {
+  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+  var callback = arguments.length > 1 ? arguments[1] : undefined;
+
+  // 开始
+  var _ref = str.match(/^```([^\n]*)?/) || [],
+      _ref2 = _slicedToArray(_ref, 2),
+      startStr = _ref2[0],
+      language = _ref2[1];
+
+  if (startStr && str[startStr.length] === '\n') {
+    var cursor = startStr.length;
+    var newStr = str.slice(startStr.length);
+    var line = '';
+
+    while (newStr) {
+      // 获取下一行
+      var _getNextLine = getNextLine(newStr);
+
+      var _getNextLine2 = _slicedToArray(_getNextLine, 2);
+
+      line = _getNextLine2[0];
+      newStr = _getNextLine2[1];
+      cursor += line.length; // 匹配到code ``` 结尾，或者已经到了字符串的行尾
+
+      var isStrEnd = !newStr && !line;
+
+      if (/^\s*```\s*$/.test(line) || isStrEnd) {
+        break;
+      }
+    }
+
+    var result = {
+      raw: str.slice(0, cursor),
+      language: language,
+      content: str.slice(startStr.length + 1, cursor - line.length),
+      endIndex: cursor
+    };
+    callback(result);
+    return result;
+  }
+
+  return null;
+}
+
+function treeShake() {
+  var lineStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+  return lineStr.split('|').filter(function (i, index, arr) {
+    return index === 0 || index === arr.length - 1 ? i.trim() : i;
+  });
+}
+
+function parseTable() {
+  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+  var callback = arguments.length > 1 ? arguments[1] : undefined;
+  var strCache = str;
+  var table = {
+    head: [],
+    body: []
+  };
+  var head = '';
+  var splitLine = '';
+  var index = 0;
+
+  var _getNextLine3 = getNextLine(str);
+
+  var _getNextLine4 = _slicedToArray(_getNextLine3, 2);
+
+  head = _getNextLine4[0];
+  str = _getNextLine4[1];
+
+  var _getNextLine5 = getNextLine(str);
+
+  var _getNextLine6 = _slicedToArray(_getNextLine5, 2);
+
+  splitLine = _getNextLine6[0];
+  str = _getNextLine6[1];
+  index += splitLine.length + head.length;
+  head = treeShake(head);
+  splitLine = treeShake(splitLine);
+
+  if (splitLine.length >= 2 && head.length) {
+    table.head = head;
+    var line = '';
+
+    while (str) {
+      var _getNextLine7 = getNextLine(str);
+
+      var _getNextLine8 = _slicedToArray(_getNextLine7, 2);
+
+      line = _getNextLine8[0];
+      str = _getNextLine8[1];
+
+      if (/^\s+$/.test(line)) {
+        index += line.length;
+        break;
+      } else {
+        // 如果遇到其他块级元素则应该结束循环？
+        //
+        index += line.length;
+        table.body.push(treeShake(line));
+      }
+    }
+
+    var result = {
+      raw: strCache.slice(0, index),
+      table: table,
+      endIndex: index
+    };
+    callback(result);
+    return result;
+  }
+
+  return null;
+}
+
+var listReg = /^(\s*)([-+])/;
+/**
+ * 父组件一路向上查询
+ */
+
+function sortUl(ul) {
+  var SPACE_PER = 5;
+
+  var newUl = _objectSpread({}, ul, {
+    ident: -1,
+    deep: 0,
+    children: []
+  });
+
+  var currentNode = newUl;
+
+  var findParent = function findParent(ident) {
+    var node = currentNode;
+
+    while (node) {
+      if (node.ident < ident) {
+        return node.ul || node;
+      }
+
+      node = node._parent;
+    }
+
+    return null;
+  };
+
+  ul.children.forEach(function (item) {
+    var _item$raw$match = item.raw.match(listReg),
+        _item$raw$match2 = _slicedToArray(_item$raw$match, 3),
+        prevStr = _item$raw$match2[0],
+        space = _item$raw$match2[1],
+        char = _item$raw$match2[2];
+
+    var ident = Math.floor(space.length / SPACE_PER); // ident 如果<= 当前的ident，那就需要向上切换
+    // 如果比当前的ident大的话，就变成当前的子元素，并把current Node更改到
+    // 如果是一个li，要添加子li，应当再创建一个ul
+
+    item.ident = ident;
+    var parent = findParent(ident);
+
+    if (parent) {
+      // deep自增，需要更新到ul
+      item.deep = parent.deep + 1;
+      item.ul && (item.ul.deep = item.deep);
+      item._parent = currentNode;
+      currentNode = item;
+      parent.children.push(item);
+    }
+  });
+  return newUl;
+}
+
+function parseUL() {
+  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+  var callback = arguments.length > 1 ? arguments[1] : undefined;
+  var strCache = str; // 如果遇到了空行则结束，否则都按照
+
+  if (!listReg.test(str)) return;
+  var index = 0;
+  var line = '';
+  var ul = {
+    type: 'ul',
+    children: []
+  };
+
+  while (str) {
+    var _getNextLine9 = getNextLine(str);
+
+    var _getNextLine10 = _slicedToArray(_getNextLine9, 2);
+
+    line = _getNextLine10[0];
+    str = _getNextLine10[1];
+    index += line.length; // 遇到空行则跳出
+
+    if (!line.trim()) {
+      break;
+    }
+
+    var matchResult = line.match(listReg);
+
+    if (matchResult) {
+      var _matchResult = _slicedToArray(matchResult, 3),
+          prevStr = _matchResult[0],
+          space = _matchResult[1],
+          char = _matchResult[2];
+
+      ul.children.push({
+        type: 'li',
+        char: char,
+        raw: line,
+        ul: {
+          // li可能会嵌套列表
+          type: 'ul',
+          children: []
+        },
+        children: [line.slice(prevStr.length)]
+      });
+    } else {
+      ul.children[ul.children.length - 1].children.push(line);
+    }
+  }
+
+  var result = {
+    raw: strCache.slice(0, index),
+    list: sortUl(ul)
+  };
+  callback(result);
+  return result;
+}
 /*
  * 1. 关键字 \n# \n- \n+ \n ```language ```
  * queto: \n> \n\n结束
@@ -283,6 +523,8 @@ function diffArr(prevNode, nextNode) {
  * 对于table的支持
  * \n|--|--|--|
  * 如果不以 #{1,6} - > ``` 开头表明就是字符串
+ * 简单的东西，当然可以正则搞定
+ * 但目前来看markdown还是需要做一点语法分析的
  */
 
 /** @typedef {import("./../@type/index").AST} AST */
@@ -312,7 +554,7 @@ var Reg = {
 
   // ```代码块```
   get code() {
-    return /^`{3}(((?!```)[\s\S])*)`{3}/;
+    return /^`{3}\n(((?!```)[\s\S])*)\n`{3}/;
   },
 
   get br() {
@@ -425,13 +667,6 @@ function getMatchResult() {
 
   return [undefined, str];
 }
-
-function splitChar() {
-  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-  var char = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-  var index = str.indexOf(char);
-  return [str.slice(0, index), str.slice(index + char.length)];
-}
 /**
  * [parser 获取AST]
  * @method parser
@@ -449,7 +684,7 @@ function parser() {
     type: 'root'
   };
   /**
-   * 更改当前node
+   * 更改切换上下文，方便快速添加children
    * @method changeCurrentNode
    * @param  {Object}          child    [需要切换到的node]
    * @param  {Function}        callback [切换后需要执行的callback]
@@ -464,152 +699,12 @@ function parser() {
     callback && callback();
     node = child.__parent;
     isPush && node.children.push(child);
+    return node;
   }
 
   function slice() {
     var all = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     str = str.slice(all.length);
-  } // 判断是否匹配到 h ul code queto
-
-
-  function testTableIsEnd(STR) {
-    return [Reg.head, // 标题 H
-    Reg.ul, // list
-    Reg.code, // code
-    Reg.queto].some(function (regexp) {
-      return regexp.test(STR);
-    });
-  }
-  /*
-      格式支持，两端的|可以不写
-      |西溪|sss|
-      |---|---|
-      |sdfsad|sdfasdf|
-  */
-  // 解析table
-
-
-  function parseTable() {
-    var _str$split = str.split('\n'),
-        _str$split2 = _slicedToArray(_str$split, 2),
-        _str$split2$ = _str$split2[0],
-        headStr = _str$split2$ === void 0 ? '' : _str$split2$,
-        _str$split2$2 = _str$split2[1],
-        splitStr = _str$split2$2 === void 0 ? '' : _str$split2$2;
-
-    if (!headStr || !splitStr) return false;
-    /**
-     * [getLineContent 获取指定字符串的指定行]
-     * @method getLineContent
-     * @param  {String}       [str='']    [description]
-     * @param  {Number}       [lineNum=0] [description]
-     * @return {Array}                   [description]
-     */
-
-    function getLineContent(line) {
-      // 判断是否符合以 |开头 |结尾
-      if (/\|/.test(line)) {
-        return line.trim().replace(/^\||\|$/g, '').split('|');
-      }
-
-      return [];
-    }
-
-    var head = getLineContent(headStr);
-    var split = getLineContent(splitStr);
-    var LEN = head.length; // 判断是否相等，split需要符合/^-+$/规则
-
-    if (LEN == 0 || head.length != split.length // 每个元素要满足 是【-】的重复存在
-    || !split.every(function (item) {
-      return /^-+$/.test(item.replace(/\s/g, ''));
-    })) {
-      return;
-    }
-
-    var table = {
-      type: 'table',
-      children: []
-    };
-    changeCurrentNode(table, function () {
-      // thead
-      str = str.replace(/(.+)\n?/, function (m, $0) {
-        var thead = {
-          type: 'thead',
-          children: []
-        };
-        changeCurrentNode(thead, function () {
-          var tr = {
-            type: 'tr',
-            children: []
-          };
-          changeCurrentNode(tr, function () {
-            $0.trim().replace(/^\||\|$/g, '').split('|').map(function (item) {
-              var th = {
-                type: 'th',
-                children: []
-              };
-              changeCurrentNode(th, function () {
-                handleText(item);
-              });
-            });
-          });
-        });
-        return '';
-      });
-      str = str.replace(/.+\n?/, ''); // tbody
-
-      var tbody = {
-        type: 'tbody',
-        children: []
-      };
-      changeCurrentNode(tbody, function () {
-        var isNotEnd = true;
-
-        var _loop = function _loop() {
-          var line = (str.match(/^.+\n?/) || [])[0]; // 没有匹配到
-
-          if (!line) {
-            return "break";
-          } // 匹配到其他块级元素
-
-
-          if (testTableIsEnd(line)) {
-            return "break";
-          } else {
-            str = str.replace(line, '');
-            var child = {
-              type: 'tr',
-              children: []
-            };
-            changeCurrentNode(child, function () {
-              var _arr2;
-
-              var arr = line.trim().split('|');
-              arr = arr[0] ? arr.slice(0, LEN) : arr.slice(1).slice(0, LEN); // 补全数组
-
-              (_arr2 = arr).push.apply(_arr2, _toConsumableArray(Array(LEN - arr.length).fill('')));
-
-              arr.forEach(function (item) {
-                var child = {
-                  type: 'td',
-                  children: []
-                };
-                changeCurrentNode(child, function () {
-                  handleText(item);
-                });
-              });
-            });
-          }
-        };
-
-        while (isNotEnd) {
-          var _ret = _loop();
-
-          if (_ret === "break") break;
-        }
-      });
-    });
-    return true;
   }
   /**
    * [handleText 处理文本]
@@ -621,7 +716,7 @@ function parser() {
   function handleText() {
     var textStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
 
-    if (!textStr) {
+    if (!textStr || typeof textStr !== 'string') {
       return;
     } // 链接
 
@@ -772,78 +867,6 @@ function parser() {
 
   function handleTranslationCode(STR) {
     return STR.replace(/>/g, '>').replace(/\\#/g, '#').replace(/\\`/g, '`').replace(/\\-/g, '-').replace(/\\\*/g, '*');
-  }
-  /**
-   * [handleUl 处理list字符串]
-   * @method handleUl
-   * @param  {String} [str=''] [description]
-   */
-
-
-  function handleUl() {
-    var ulStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-    ulStr = "".concat(ulStr, "\n"); // 根据$space去识别嵌套
-    // 按行处理
-
-    var SPACE_PER = 5; // SPACE_PER 表示一个层级
-
-    var LIST_STYLES = ['disc', // 实心圆
-    'circle', // 空心圆
-    'square'];
-    var DECIMAL = 'decimal';
-
-    function next() {
-      var currentDeep = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : -1;
-      if (!ulStr) return;
-      var line = (ulStr.match(/.+\n?/) || [])[0];
-      var space = line.match(/\s*/)[0];
-      var DEEP = Math.floor(space.length / SPACE_PER);
-
-      if (/^[-+]\s+/.test(line.trim())) {
-        // 如果是加号，表示是一个有序列表
-        var IS_PLUS = line.match(/\s*[-+]/)[0].trim() == '+';
-
-        if (DEEP == currentDeep + 1) {
-          // 如果当前行属于新行，就如下一个ul
-          var _child = {
-            type: 'ul',
-            listStyleType: IS_PLUS ? DECIMAL : LIST_STYLES[DEEP % LIST_STYLES.length],
-            children: []
-          };
-          changeCurrentNode(_child, function () {
-            next(currentDeep + 1);
-          });
-          next(currentDeep);
-          return;
-        } else if (DEEP == currentDeep) {
-          var _child2 = {
-            type: 'li',
-            children: []
-          }; // 添加子li
-
-          changeCurrentNode(_child2, function () {
-            handleText(line.replace(/\s*[-+]\s*/, ''));
-          });
-          ulStr = ulStr.slice(line.length);
-          next(currentDeep);
-          return;
-        } else if (DEEP < currentDeep) {
-          // 返回到父节点
-          return;
-        }
-      }
-
-      var child = node.children[node.children.length - 1];
-      changeCurrentNode(child, function () {
-        handleText(line);
-      }, {
-        isPush: false
-      });
-      ulStr = ulStr.slice(line.length);
-      next(currentDeep);
-    }
-
-    next();
   } // 迭代器
 
 
@@ -858,7 +881,7 @@ function parser() {
     } // 换行符
 
 
-    if (/Reg.br/.test(str)) {
+    if (Reg.br.test(str)) {
       var _str$match = str.match(Reg.br),
           _str$match2 = _slicedToArray(_str$match, 1),
           all = _str$match2[0];
@@ -873,11 +896,11 @@ function parser() {
 
 
     if (Reg.head.test(str)) {
-      var _ref = str.match(Reg.head) || [],
-          _ref2 = _slicedToArray(_ref, 3),
-          _all = _ref2[0],
-          head = _ref2[1],
-          content = _ref2[2];
+      var _ref3 = str.match(Reg.head) || [],
+          _ref4 = _slicedToArray(_ref3, 3),
+          _all = _ref4[0],
+          head = _ref4[1],
+          content = _ref4[2];
 
       var child = {
         type: "h".concat(head.length),
@@ -919,98 +942,157 @@ function parser() {
     } // code
 
 
-    if (Reg.code.test(str)) {
-      var _str$match5 = str.match(Reg.code),
-          _str$match6 = _slicedToArray(_str$match5, 2),
-          _all3 = _str$match6[0],
-          _match = _str$match6[1];
-
-      var _splitChar$map = splitChar(_match, '\n').map(function (i) {
-        return i.trim();
-      }),
-          _splitChar$map2 = _slicedToArray(_splitChar$map, 2),
-          language = _splitChar$map2[0],
-          value = _splitChar$map2[1];
-
+    if (parseBlockCode(str, function (_ref5) {
+      var language = _ref5.language,
+          content = _ref5.content,
+          raw = _ref5.raw;
       changeCurrentNode({
         type: 'code',
         language: language,
-        value: value
+        value: content
       });
-      slice(_all3);
+      slice(raw);
+    })) {
       next();
       return;
     }
 
     if (Reg.todoItem.test(str)) {
-      var _ref3 = str.match(Reg.todoItem) || [],
-          _ref4 = _slicedToArray(_ref3, 1),
-          _all4 = _ref4[0];
+      var _ref6 = str.match(Reg.todoItem) || [],
+          _ref7 = _slicedToArray(_ref6, 1),
+          _all3 = _ref7[0];
 
-      if (_all4 !== undefined) {
+      if (_all3 !== undefined) {
         changeCurrentNode({
           type: 'todoItem',
-          checked: _all4.includes('x')
+          checked: _all3.includes('x')
         });
       }
 
-      slice(_all4);
+      slice(_all3);
       next();
       return;
-    } // ul
+    }
 
+    if (parseUL(str, function (_ref8) {
+      var raw = _ref8.raw,
+          list = _ref8.list;
+      var LIST_STYLES = ['disc', // 实心圆
+      'circle', // 空心圆
+      'square'];
+      var DECIMAL = 'decimal';
 
-    if (Reg.ul.test(str)) {
-      var _str$match7 = str.match(Reg.ul),
-          _str$match8 = _slicedToArray(_str$match7, 2),
-          _all5 = _str$match8[0],
-          _match2 = _str$match8[1];
+      var xx = function xx(ul) {
+        var children = ul.children,
+            deep = ul.deep;
+        var child = {
+          type: 'ul',
+          listStyleType: children[0].char === '+' ? DECIMAL : LIST_STYLES[deep % LIST_STYLES.length],
+          children: []
+        };
+        changeCurrentNode(child, function () {
+          children.forEach(function (item) {
+            changeCurrentNode({
+              type: 'li',
+              children: []
+            }, function () {
+              item.children.forEach(function (line) {
+                handleText(line);
+              });
+              item.ul.children.length && xx(item.ul);
+            });
+          });
+        });
+      };
 
-      changeCurrentNode(node, function () {
-        handleUl(_match2);
-      }, {
-        isPush: false
-      });
-      changeCurrentNode({
-        type: 'br'
-      });
-      slice(_all5);
+      xx(list);
+      slice(raw);
+    })) {
       next();
       return;
     } // tbale
 
 
-    if (parseTable(str)) {
+    if (parseTable(str, function (result) {
+      changeCurrentNode({
+        type: 'table',
+        children: []
+      }, function () {
+        // table头
+        changeCurrentNode({
+          type: 'thead',
+          children: []
+        }, function () {
+          changeCurrentNode({
+            type: 'tr',
+            children: []
+          }, function () {
+            result.table.head.forEach(function (item) {
+              changeCurrentNode({
+                type: 'th',
+                children: []
+              }, function () {
+                handleText(item);
+              });
+            });
+          });
+        });
+        changeCurrentNode({
+          type: 'tbody',
+          children: []
+        }, function () {
+          result.table.body.forEach(function (item) {
+            changeCurrentNode({
+              type: 'tr',
+              children: []
+            }, function () {
+              item.forEach(function (item) {
+                changeCurrentNode({
+                  type: 'th',
+                  children: []
+                }, function () {
+                  handleText(item);
+                });
+              });
+            });
+          });
+        });
+      });
+      changeCurrentNode({
+        type: 'br'
+      });
+      slice(result.raw);
+    })) {
       next();
       return;
     } // hr
 
 
     if (Reg.hr.test(str)) {
-      var _ref5 = str.match(Reg.hr) || [],
-          _ref6 = _slicedToArray(_ref5, 1),
-          _all6 = _ref6[0];
+      var _ref9 = str.match(Reg.hr) || [],
+          _ref10 = _slicedToArray(_ref9, 1),
+          _all4 = _ref10[0];
 
-      if (_all6 !== undefined) {
+      if (_all4 !== undefined) {
         changeCurrentNode({
           type: 'hr',
           children: []
         });
       }
 
-      slice(_all6);
+      slice(_all4);
       next();
       return;
     } // 单行text
 
 
     if (Reg.text.test(str)) {
-      var _ref7 = str.match(Reg.text) || [''],
-          _ref8 = _slicedToArray(_ref7, 1),
-          _all7 = _ref8[0];
+      var _ref11 = str.match(Reg.text) || [''],
+          _ref12 = _slicedToArray(_ref11, 1),
+          _all5 = _ref12[0];
 
-      handleText(_all7);
-      slice(_all7);
+      handleText(_all5);
+      slice(_all5);
       next();
       return;
     }

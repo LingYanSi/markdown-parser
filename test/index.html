@@ -10,6 +10,9 @@
             padding: 0;
             margin: 0;
         }
+        body {
+            font-size: 12px;
+        }
         textarea, #render {
             display: block;
             box-sizing: border-box;
@@ -49,10 +52,17 @@
             border: none;
             cursor: pointer;
             outline: none;
+            border-radius: 10px;
+        }
+
+        #full:hover {
+            transition: all .3s;
+            background: pink;
         }
 
         #preview {
             position: fixed;
+            display: none;
             top: 0;
             right: 100px;
             padding: 10px;
@@ -61,18 +71,13 @@
             cursor: pointer;
             outline: none;
         }
-
-        #full:hover {
-            transition: all .3s;
-            background: pink;
-        }
     </style>
 </head>
 <body>
     <div class="flex main">
         <textarea placeholder="write something" autofocus></textarea>
         <div id="render"></div>
-        <button id="full">full</button>
+        <button id="full">全屏</button>
         <button id="preview">preview</button>
     </div>
     <script type="module">
@@ -132,51 +137,55 @@
         $('#preview').addEventListener('click', render)
         render()
 
-        function hotKey(dom = document.body, keys, callback) {
-            let cacheKeys = []
-            const maps = {
-                '91': 'ctrl',
-                '83': 's',
-            }
-
-            function clear() {
-                if (cacheKeys[0] !== 91) {
-                    cacheKeys = []
-                }
-            }
-
-            function keyDown(event) {
-                const { keyCode } = event
-                clear()
-
-                if (!cacheKeys[0] && maps[keyCode] == 'ctrl') {
-                    cacheKeys.push(keyCode)
-                    return
-                }
-
-                if (cacheKeys[0] && !cacheKeys[1] && maps[keyCode] == 's') {
-                    navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey
-                    cacheKeys.push(keyCode)
-                    callback && callback()
-                    event.preventDefault()
-                    return
-                }
-            }
-
-            function keyUp({ keyCode }) {
-                cacheKeys = cacheKeys.filter(i => i !== keyCode)
-                clear()
-            }
-
-            dom.addEventListener('keydown', keyDown)
-            dom.addEventListener('keyup', keyUp)
-        }
-
-        hotKey(window, 'ctrl+s', render)
-
         $('#full').addEventListener('click', () => {
             $('textarea').classList.toggle('hide')
         })
+
+        // function hotKey(dom = document.body, keys, callback) {
+        //     let cacheKeys = []
+        //     const maps = {
+        //         '91': 'ctrl',
+        //         '83': 's',
+        //         '13': 'enter',
+        //     }
+
+        //     function clear() {
+        //         if (cacheKeys[0] !== maps[91]) {
+        //             cacheKeys = []
+        //         }
+        //     }
+
+        //     function keyDown(event) {
+        //         const { keyCode } = event
+        //         clear()
+
+        //         // navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey
+        //         if (maps[keyCode] && !cacheKeys.includes(maps[keyCode])) {
+        //             cacheKeys.push(maps[keyCode])
+        //         }
+
+        //         console.log(cacheKeys)
+
+        //         if (cacheKeys.join('+') === keys) {
+        //             callback && callback()
+        //             event.preventDefault()
+        //             return
+        //         }
+        //     }
+
+        //     function keyUp({ keyCode }) {
+        //         cacheKeys = cacheKeys.filter(i => i !== keyCode)
+        //         clear()
+        //     }
+
+        //     dom.addEventListener('keydown', keyDown)
+        //     dom.addEventListener('keyup', keyUp)
+        // }
+
+        // hotKey(window, 'ctrl+s', render)
+        // hotKey(window, 'ctrl+enter', () => {
+        //     $('textarea').classList.toggle('hide')
+        // })
     </script>
 </body>
 </html>
