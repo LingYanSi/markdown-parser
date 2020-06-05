@@ -18,6 +18,8 @@
 // 为node添加id
 /** @typedef {import("./../@type/index").AST} AST */
 
+const NO_NEED_DIFF = ['$getNode', '__node', '__parent', '__update', 'children', 'type']
+
 /**
  * diff对象差异
  * @export
@@ -32,7 +34,7 @@ export function diffObject(prevNode = {}, nextNode = {}) {
     const change = [] // 删除
     prevKeys.forEach(key => {
         // 不需要参与diff的key
-        if (['__htmlNode', '__parent', '__update', 'children', 'type'].includes(key)) {
+        if (NO_NEED_DIFF.includes(key)) {
             return
         }
 
@@ -113,7 +115,7 @@ export function diffNode(prevNode, nextNode, diffResultArr = [], otherInfo = {})
         update.propsChange.push(...diffObject(prevNode, nextNode))
 
         // 如果前后节点没有发生变化，则继承上一个node上的相关信息
-        nextNode.__htmlNode = prevNode.__htmlNode
+        nextNode.$getNode = prevNode.$getNode
         nextNode.__update = prevNode.__update
 
         if (update.propsChange.length) {

@@ -19,21 +19,19 @@ export default function patch(diffResult = [], $container = document.body) {
         const { nextNode } = item
         switch (item.type) {
             case 'del': {
-                const { __htmlNode } = item.prevNode
-                if (!__htmlNode.parentElement) {
+                const $prevNodeDom = item.prevNode.$getNode(item.type)
+                if (!$prevNodeDom.parentElement) {
                     console.log('delete error::', item)
                 }
-                __htmlNode.parentElement.removeChild(__htmlNode)
+                $prevNodeDom.parentElement.removeChild($prevNodeDom)
                 break
             }
 
             case 'add': {
-                const $realContainer = (nextNode.__parent && nextNode.__parent.__htmlNode) || $container
-                console.log('addd', $realContainer, nextNode)
-
+                const $realContainer = (nextNode.__parent && nextNode.__parent.$getNode(item.type)) || $container
                 trans(nextNode, $realContainer, {
+                    // 自定义新节点的插入位置，而不是所有的插在末尾处
                     beforeAppend(ele) {
-                        console.log(ele)
                         const ref = $realContainer.childNodes[item.moveTo]
                         if (ref) {
                             insertBefore(ele, ref)
@@ -45,24 +43,25 @@ export default function patch(diffResult = [], $container = document.body) {
             }
 
             case 'replace': {
-                const { __htmlNode } = item.prevNode
+                const $prevNodeDom = item.prevNode.$getNode(item.type)
                 const $parent = document.createDocumentFragment()
                 trans(nextNode, $parent)
-                __htmlNode.parentElement.replaceChild($parent, __htmlNode)
+                $prevNodeDom.parentElement.replaceChild($parent, $prevNodeDom)
                 break
             }
 
             case 'move': {
                 let { moveTo } = item
                 const { prevNode } = item
-                const parent = prevNode.__htmlNode.parentElement
+                const $prevNodeDom = prevNode.$getNode(item.type)
+                const parent = $prevNodeDom.parentElement
 
                 // 如果目标元素和当前元素相同，则不用移动
-                if (parent.childNodes[moveTo] !== prevNode.__htmlNode) {
+                if (parent.childNodes[moveTo] !==  $prevNodeDom) {
                     if (parent.childNodes[moveTo]) {
-                        insertBefore(prevNode.__htmlNode, parent.childNodes[moveTo])
+                        insertBefore($prevNodeDom, parent.childNodes[moveTo])
                     } else {
-                        parent.appendChild(prevNode.__htmlNode)
+                        parent.appendChild($prevNodeDom)
                     }
                 }
                 break
@@ -70,9 +69,12 @@ export default function patch(diffResult = [], $container = document.body) {
 
             case 'update': {
                 const { propsChange, prevNode, nextNode } = item
-                const { __htmlNode } = prevNode
+                const $prevNodeDom = prevNode.$getNode(item.type)
                 // 继承htmlNode
-                nextNode.__htmlNode = __htmlNode
+                nextNode.$getNode = prevNode.$getNode
+                if (prevNode.__node) {
+                    nextNode.__node = prevNode.__node
+                }
 
                 // 继承update
                 if (prevNode.__update) {
@@ -93,17 +95,17 @@ export default function patch(diffResult = [], $container = document.body) {
                             }
 
                             // 更新文本节点
-                            if (__htmlNode instanceof Text) {
-                                __htmlNode.data = newValue
+                            if ($prevNodeDom instanceof Text) {
+                                $prevNodeDom.data = newValue
                                 break
                             }
 
                             // 更新其他属性
-                            __htmlNode.setAttribute(key, newValue)
+                            $prevNodeDom.setAttribute(key, newValue)
                             break
                         }
                         case 'del': {
-                            __htmlNode.removeAttribute(key)
+                            $prevNodeDom.removeAttribute(key)
                             break
                         }
                     }

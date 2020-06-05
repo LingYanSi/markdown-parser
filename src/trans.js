@@ -28,7 +28,9 @@ function getText(node, str = '') {
  * @param {HTMLElement} $parent
  */
 export default function trans(node, $parent, option = {}) {
-    let ele
+    let ele // 接受子节点的元素
+    let realRoot // 真正的根节点，因为对于某些node，他的渲染逻辑不是一个简单的html标签，而是多个标签
+    let $getNode = () => ele;
 
     switch (node.type) {
         case 'audio':
@@ -143,15 +145,27 @@ export default function trans(node, $parent, option = {}) {
             node.__update('listStyleType', node)
             break
         }
-        case 'lineThrough': {
+        // 需要完成一个事情，就是添加和dom没有关系，我们可以包两层，包几层的结果是，删除和替换的时候需要特殊处理一下
+        // 以避免dom没有删除或者替换干净
+        // add / remove / replace / move
+        /**
+         * node.getRoot = () => [返回真实的根节点]，可以是一个数组
+         */
+        case 'li-done':
+        case 'li-todo': {
+            realRoot = document.createElement('li')
+
+            const tag = document.createElement('span')
+            tag.className = "list-todo-tag"
+            tag.textContent = node.type === 'li-done' ? '✅' : '🚧';
+            realRoot.appendChild(tag)
+
             ele = document.createElement('span')
-            ele.style.cssText += `;text-decoration: line-through;`
-            break
-        }
-        case 'todoItem': {
-            ele = document.createElement('input')
-            ele.type = 'checkbox'
-            ele.checked = node.checked
+            realRoot.appendChild(ele)
+
+            realRoot.style.cssText += `;list-style: none;`
+
+            $getNode = (type) => type === 'add' ? ele : realRoot
             break
         }
         default:
@@ -165,13 +179,15 @@ export default function trans(node, $parent, option = {}) {
         }
     }
 
+    realRoot = realRoot || ele
+    node.$getNode = $getNode
+
     node.tag && ele.setAttribute('tag', node.tag)
     node.children && node.children.forEach(child => trans(child, ele))
 
-    if (!(option.beforeAppend && option.beforeAppend(ele))) {
-        $parent.appendChild(ele)
+    if (!(option.beforeAppend && option.beforeAppend(realRoot))) {
+        $parent.appendChild(realRoot)
     }
-    node.__htmlNode = ele
 
     return ele
 }

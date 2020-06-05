@@ -1,4 +1,4 @@
-import { parseTable, parseBlockCode, parseUL } from './tokenizer.js'
+import { parseTable, parseBlockCode, parseUL, parseQuote } from './tokenizer.js'
 
 /*
  * 1. 关键字 \n# \n- \n+ \n ```language ```
@@ -24,18 +24,9 @@ export const Reg = {
     get head() {
         return /^\s*(#{1,6})([^\n]*)\n?/
     },
-    // - 无序list
-    // + 有序list
-    get ul() {
-        return /^([-+]\s+((?!\n\n)[\s\S])*)\n\n/
-    },
     // `行内code`
     get inlineCode() {
         return /^`([^`]*)`/
-    },
-    // ```代码块```
-    get code() {
-        return /^`{3}\n(((?!```)[\s\S])*)\n`{3}/
     },
     get br() {
         return /^\n/
@@ -59,11 +50,6 @@ export const Reg = {
     get blod() {
         // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
         return /^\*{2}(((?!\*{2}).)*)\*{2}/
-    },
-    // - [] 待完成事项
-    // - [x] 完成事情
-    get todoItem() {
-        return /^-\ +\[\s*(x?)\s*\]\ +/
     },
     // !!![视频](url)
     get video() {
@@ -131,24 +117,6 @@ function getMatchResult(str = '', startTag = '[', endTag = ']') {
     return [undefined, str]
 }
 
-function splitChar(str = '', char = '') {
-    const index = str.indexOf(char)
-    return [
-        str.slice(0, index),
-        str.slice(index + char.length)
-    ]
-}
-
-// 判断是否匹配到 h ul code queto
-function testTableIsEnd(STR) {
-    return [
-        Reg.head, // 标题 H
-        Reg.ul, // list
-        Reg.code, // code
-        Reg.queto, // 引用
-    ].some(regexp => regexp.test(STR))
-}
-
 /**
  * [parser 获取AST]
  * @method parser
@@ -156,7 +124,6 @@ function testTableIsEnd(STR) {
  * @return {AST}          [ast tree]
  */
 export function parser(str = '', defaultNode = null ) {
-    str += '\n\n'
     let node = defaultNode || {
         children: [],
         type: 'root',
@@ -373,23 +340,15 @@ export function parser(str = '', defaultNode = null ) {
             return
         }
 
-        // 引用
-        if (Reg.queto.test(str)) {
-            const [all, match] = str.match(Reg.queto)
-            const [tag, leftStr] = getMatchResult(match, '[', ']')
-
+        if (parseQuote(str, ({ raw, content }) => {
             const h = {
                 type: 'queto',
-                tag,
                 children: [],
             }
             changeCurrentNode(h)
-            h.children= parser(leftStr.replace(/^\s*\n/, ''), h).children
-
-            changeCurrentNode({
-                type: 'br',
-            })
-            slice(all)
+            h.children= parser(content, h).children
+            slice(raw)
+        })) {
             next()
             return
         }
@@ -407,19 +366,6 @@ export function parser(str = '', defaultNode = null ) {
             return
         }
 
-        if (Reg.todoItem.test(str)) {
-            const [all] = str.match(Reg.todoItem) || []
-            if (all !== undefined) {
-                changeCurrentNode({
-                    type: 'todoItem',
-                    checked: all.includes('x'),
-                })
-            }
-            slice(all)
-            next()
-            return
-        }
-
         if (parseUL(str, ({ raw, list }) => {
             const LIST_STYLES = [
                 'disc', // 实心圆
@@ -428,7 +374,7 @@ export function parser(str = '', defaultNode = null ) {
             ]
             const DECIMAL = 'decimal'
 
-            const xx = (ul) => {
+            const handleList = (ul) => {
                 const { children, deep } = ul
 
                 const child = {
@@ -439,18 +385,17 @@ export function parser(str = '', defaultNode = null ) {
 
                 changeCurrentNode(child, () => {
                     children.forEach(item => {
-                        changeCurrentNode({ type: 'li', children: [], }, () => {
+                        changeCurrentNode({ type: item.type, children: [], }, () => {
                             item.children.forEach((line) => {
                                 handleText(line)
                             })
-                            item.ul.children.length && xx(item.ul)
+                            item.ul.children.length && handleList(item.ul)
                         })
                     })
                 })
             }
 
-            xx(list)
-
+            handleList(list)
 
             slice(raw)
         })) {

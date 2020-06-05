@@ -50,6 +50,12 @@
 
 .markdown ul, .markdown li {
     list-style: inherit;
+    position: relative;
+}
+
+.markdown .list-todo-tag {
+    position: absolute;
+    left: -1.4em;
 }
 
 .markdown table {

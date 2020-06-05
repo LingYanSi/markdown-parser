@@ -97,10 +97,12 @@ export function parseTable(str = '', callback) {
     return null
 }
 
-const listReg = /^(\s*)([-+])/;
+// - 一般list
+// - [x] todoList，两者都归于list类型
+const listReg = /^(\s*)([-+])(\s\[[\sx]?\])?/;
 
 /**
- * 父组件一路向上查询
+ * 父组件一路向上查询，只关心父节点，不关心兄弟节点
  */
 function sortUl(ul) {
     const SPACE_PER = 5
@@ -130,8 +132,12 @@ function sortUl(ul) {
         // ident 如果<= 当前的ident，那就需要向上切换
         // 如果比当前的ident大的话，就变成当前的子元素，并把current Node更改到
         // 如果是一个li，要添加子li，应当再创建一个ul
-        item.ident = ident
-        const parent = findParent(ident)
+        item.ident = ident;
+        item.ul = { // li可能会嵌套列表
+            type: 'ul',
+            children: [],
+        };
+        const parent = findParent(ident);
         if (parent) {
             // deep自增，需要更新到ul
             item.deep = parent.deep + 1
@@ -168,16 +174,20 @@ export function parseUL(str = '', callback) {
 
         const matchResult = line.match(listReg)
         if (matchResult) {
-            const [prevStr, space, char] = matchResult
+            const [prevStr, space, char, todoStr] = matchResult
+            const child = line.slice(prevStr.length)
+
+            let todoType = ''
+            if (todoStr) {
+                todoType = todoStr.indexOf('x') > -1 ? 'done' : 'todo'
+            }
+
+            // 判断类型是不是todo
             ul.children.push({
-                type: 'li',
+                type: todoType ? `li-${todoType}`  : 'li',
                 char,
                 raw: line,
-                ul: { // li可能会嵌套列表
-                    type: 'ul',
-                    children: [],
-                },
-                children: [line.slice(prevStr.length)],
+                children: [child],
             })
         } else {
             ul.children[ul.children.length - 1].children.push(line)
@@ -191,6 +201,30 @@ export function parseUL(str = '', callback) {
 
     callback(result)
 
+    return result
+}
+
+export function parseQuote(str, callback) {
+    // 判断是不是以 < 开头，以遇到一个换行结束
+    if (str[0] !== '>') return
+    const strCache = str;
+    let index = 0
+
+    let line = ''
+    while (str) {
+        [line, str] = getNextLine(str)
+        index += line.length
+        if (!line.trim()) {
+            break
+        }
+    }
+
+    const result = {
+        raw: strCache.slice(0, index),
+        content: strCache.slice(1, index),
+    }
+
+    callback(result)
     return result
 }
 
