@@ -216,7 +216,10 @@ export function parseQuote(str, callback) {
     while (str) {
         [line, str] = getNextLine(str);
         index += line.length;
-        if (!line.trim()) {
+
+        // 使用两个换行作为结束符
+        const [nextline] = getNextLine(str);
+        if (!line.trim() && !nextline.trim()) {
             break;
         }
     }
