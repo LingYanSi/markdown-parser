@@ -18,7 +18,14 @@
 // 为node添加id
 /** @typedef {import("./../@type/index").AST} AST */
 
-const NO_NEED_DIFF = ['$getNode', '__node', '__parent', '__update', 'children', 'type']
+const NO_NEED_DIFF = [
+    '$getNode',
+    '__node',
+    '__parent',
+    '__update',
+    'children',
+    'type',
+];
 
 /**
  * diff对象差异
@@ -28,14 +35,14 @@ const NO_NEED_DIFF = ['$getNode', '__node', '__parent', '__update', 'children', 
  * @returns
  */
 export function diffObject(prevNode = {}, nextNode = {}) {
-    const prevKeys = Object.keys(prevNode)
-    const nextKeys = Object.keys(nextNode)
+    const prevKeys = Object.keys(prevNode);
+    const nextKeys = Object.keys(nextNode);
 
-    const change = [] // 删除
-    prevKeys.forEach(key => {
+    const change = []; // 删除
+    prevKeys.forEach((key) => {
         // 不需要参与diff的key
         if (NO_NEED_DIFF.includes(key)) {
-            return
+            return;
         }
 
         if (nextKeys.includes(key)) {
@@ -45,30 +52,30 @@ export function diffObject(prevNode = {}, nextNode = {}) {
                     key,
                     prevNode,
                     nextNode,
-                })
+                });
             }
-            return
+            return;
         }
         change.push({
             type: 'del',
             key,
             prevNode,
             nextNode,
-        })
-    })
+        });
+    });
 
-    nextKeys.forEach(key => {
+    nextKeys.forEach((key) => {
         if (!prevKeys.includes(key)) {
             change.push({
                 type: 'add',
                 key,
                 prevNode,
                 nextNode,
-            })
+            });
         }
-    })
+    });
 
-    return change
+    return change;
 }
 
 /**
@@ -78,8 +85,13 @@ export function diffObject(prevNode = {}, nextNode = {}) {
  * @param {AST} nextNode
  * @returns
  **/
-export function diffNode(prevNode, nextNode, diffResultArr = [], otherInfo = {}) {
-    if (prevNode === nextNode) return diffResultArr
+export function diffNode(
+    prevNode,
+    nextNode,
+    diffResultArr = [],
+    otherInfo = {}
+) {
+    if (prevNode === nextNode) return diffResultArr;
 
     if (!prevNode) {
         diffResultArr.push({
@@ -87,14 +99,14 @@ export function diffNode(prevNode, nextNode, diffResultArr = [], otherInfo = {})
             prevNode,
             nextNode,
             ...otherInfo,
-        })
+        });
     } else if (!nextNode) {
         diffResultArr.push({
             type: 'del',
             prevNode,
             nextNode,
             ...otherInfo,
-        })
+        });
     } else if (prevNode.type !== nextNode.type) {
         // 如果类型不一样，就重新创建
         diffResultArr.push({
@@ -102,7 +114,7 @@ export function diffNode(prevNode, nextNode, diffResultArr = [], otherInfo = {})
             prevNode,
             nextNode,
             ...otherInfo,
-        })
+        });
     } else {
         // type一样，比对props与children
         const update = {
@@ -110,22 +122,22 @@ export function diffNode(prevNode, nextNode, diffResultArr = [], otherInfo = {})
             prevNode,
             nextNode,
             propsChange: [],
-        }
+        };
 
-        update.propsChange.push(...diffObject(prevNode, nextNode))
+        update.propsChange.push(...diffObject(prevNode, nextNode));
 
         // 如果前后节点没有发生变化，则继承上一个node上的相关信息
-        nextNode.$getNode = prevNode.$getNode
-        nextNode.__update = prevNode.__update
+        nextNode.$getNode = prevNode.$getNode;
+        nextNode.__update = prevNode.__update;
 
         if (update.propsChange.length) {
-            diffResultArr.push(update)
+            diffResultArr.push(update);
         }
 
         // 如果一个节点上的children 没有任何改变可以，忽略这个children
         // 如果一个节点上的，update的props为空
         // 甚至来讲可以把tree拍成一维数组
-        diffArr(prevNode, nextNode, diffResultArr)
+        diffArr(prevNode, nextNode, diffResultArr);
     }
 
     return diffResultArr;
@@ -145,43 +157,48 @@ export function diffNode(prevNode, nextNode, diffResultArr = [], otherInfo = {})
  * @returns
  */
 export function diffArr(prevNode, nextNode, diffResultArr = []) {
-    const { children: prevArr = [] } = prevNode
-    const { children: nextArr = [] } = nextNode
+    const { children: prevArr = [] } = prevNode;
+    const { children: nextArr = [] } = nextNode;
 
     // 如果不存在这个type类型，需要删除
-    let filterPrevArr = prevArr.filter((item, index) => {
-        if (!nextArr.some(i => i.type === item.type)) {
-            diffNode(item, null, diffResultArr)
-            return false
+    let filterPrevArr = prevArr.filter((item) => {
+        if (!nextArr.some((i) => i.type === item.type)) {
+            diffNode(item, null, diffResultArr);
+            return false;
         }
-        return true
-    })
+        return true;
+    });
 
     // 取有效元素
-    nextArr.forEach((item, moveTo) => {
+    nextArr.forEach((item) => {
         filterPrevArr.some((ele, index) => {
             if (ele.type === item.type) {
-                filterPrevArr[index] = { isDel: true, ele }
-                return true
+                filterPrevArr[index] = { isDel: true, ele };
+                return true;
             }
-            return false
-        })
-    })
+            return false;
+        });
+    });
 
     // 删除剩余元素
-    filterPrevArr.filter(i => !i.isDel).forEach(item => diffNode(item, null, diffResultArr))
+    filterPrevArr
+        .filter((i) => !i.isDel)
+        .forEach((item) => diffNode(item, null, diffResultArr));
 
     // 取出有用的元素
-    const ff = filterPrevArr.filter(i => i.isDel).map(i => i.ele)
+    const ff = filterPrevArr.filter((i) => i.isDel).map((i) => i.ele);
 
     // 最后的move/update add
     nextArr.forEach((item, moveTo) => {
         const isMatch = ff.some((ele, index) => {
             if (ele.type === item.type) {
                 // 注释元素，表示其已经使用过了
-                ff.splice(index, 1)
+                ff.splice(index, 1);
                 // 需要把ff的元素位置进行实时更新，否则将会出现位置错乱
-                ff.splice(moveTo > index ? moveTo - 1 : moveTo, 0, { used: true, ele })
+                ff.splice(moveTo > index ? moveTo - 1 : moveTo, 0, {
+                    used: true,
+                    ele,
+                });
 
                 if (index !== moveTo) {
                     diffResultArr.push({
@@ -191,21 +208,21 @@ export function diffArr(prevNode, nextNode, diffResultArr = []) {
                         current: index,
                         // 如果目标位置大于当前位置，则需要移动的目标元素下一个元素的前面
                         moveTo: moveTo > index ? moveTo + 1 : moveTo,
-                    })
+                    });
                 }
                 // 元素需要先移动
-                diffNode(ele, item, diffResultArr)
-                return true
+                diffNode(ele, item, diffResultArr);
+                return true;
             }
-            return false
-        })
+            return false;
+        });
 
         if (!isMatch) {
             // 使用占用元素，以矫正index
-            ff.splice(moveTo, 0, { add: true, item })
-            diffNode(null, item, diffResultArr, { moveTo })
+            ff.splice(moveTo, 0, { add: true, item });
+            diffNode(null, item, diffResultArr, { moveTo });
         }
-    })
+    });
     // 首先来讲filterPrevArr的所有type, nextArr内都是存在的，但可能数量是不一致的
     // [ 1 2 3 ] [ 1 4 3 5 2 ]
     // 4 在 [ 2 3 ] 中不存在，insert after 1

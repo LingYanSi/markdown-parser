@@ -1,71 +1,70 @@
-import { diffNode } from './diff.js'
-import { parser } from './parser.js'
-import patch from './patch.js'
-import trans from './trans.js'
+import { diffNode } from './diff.js';
+import { parser } from './parser.js';
+import patch from './patch.js';
+import trans from './trans.js';
 
 /**
  * 遍历节点获取Node内的图片、文本信息
  * @param  {Node} node [markdown AST]
  */
 function getParserNodeInfo(node) {
-    let text = ''
-    const imgs = []
+    let text = '';
+    const imgs = [];
     function next(mNode) {
         if (mNode.type == 'text') {
-            text += mNode.value || ''
+            text += mNode.value || '';
         }
         if (mNode.type == 'img') {
-            imgs.push(mNode.src)
+            imgs.push(mNode.src);
         }
-        mNode.children && mNode.children.forEach(next)
+        mNode.children && mNode.children.forEach(next);
     }
-    next(node)
+    next(node);
     return {
         text,
         imgs,
-    }
+    };
 }
 
-
-const cache = {}
+const cache = {};
 
 // 获取解析结果
 function getParseResult(str = '') {
-    let parseResult = cache[str]
+    let parseResult = cache[str];
     if (!parseResult) {
-        const root = parser(str)
-        parseResult = { root, ...getParserNodeInfo(root) }
-        cache[str] = parseResult
+        const root = parser(str);
+        parseResult = { root, ...getParserNodeInfo(root) };
+        cache[str] = parseResult;
     }
-    return parseResult
+    return parseResult;
 }
 
-const loadedAsset = {}
+const loadedAsset = {};
 // 加载静态资源
 function loadAsset(url) {
-    return new Promise(res => {
+    return new Promise((res) => {
         if (loadedAsset[url]) {
             return res();
         }
         const onload = () => {
-            loadedAsset[url] = true
-            res()
-        }
+            loadedAsset[url] = true;
+            res();
+        };
         if (url.endsWith('.js')) {
-            const s = document.createElement('script')
-            s.onload = onload
-            s.src = url
-            document.head.appendChild(s)
+            const s = document.createElement('script');
+            s.onload = onload;
+            s.src = url;
+            document.head.appendChild(s);
         } else if (url.endsWith('.css')) {
-            const s = document.createElement('link')
-            s.onload = onload
-            s.type = "text/css"
-            s.rel = "stylesheet"
-            s.charset = "utf-8"
-            s.href = url
-            document.head.appendChild(s)
+            const s = document.createElement('link');
+            s.onload = onload;
+            s.type = 'text/css';
+            s.rel = 'stylesheet';
+            s.charset = 'utf-8';
+            s.href = url;
+            document.head.appendChild(s);
         }
-    })
+    });
 }
 
 /**
@@ -73,66 +72,65 @@ function loadAsset(url) {
  * @param  {HTMLElement}      dom [代码高亮]
  */
 function codeHighlight(dom, config) {
-    Promise.all(config.asset.map(loadAsset))
-        .then(() => {
-            if (!window.hljs || !dom) return
+    Promise.all(config.asset.map(loadAsset)).then(() => {
+        if (!window.hljs || !dom) return;
 
-            window.hljs.configure({
-                // useBR: true, // 是否使用br
-                tabReplace: 4,
-            });
-
-            [...dom.querySelectorAll('code.highlight')].forEach((code) => {
-                window.hljs.highlightBlock(code)
-            })
-        })
+        window.hljs.configure({
+            // useBR: true, // 是否使用br
+            tabReplace: 4,
+        });
+        [...dom.querySelectorAll('code.highlight')].forEach((code) => {
+            window.hljs.highlightBlock(code);
+        });
+    });
 }
 
 function getConfig(initConfig) {
     return {
         asset: [], // 代码高亮库加载
         ...initConfig,
-    }
+    };
 }
 
 class Markdown {
     constructor(dom, config, str) {
-        this.dom = dom
-        this.config = config
-        this.prevRoot = null
+        this.dom = dom;
+        this.config = config;
+        this.prevRoot = null;
 
         if (str) {
-            this.update(str)
+            this.update(str);
         }
     }
     update(str) {
-        this.dom.classList.add('markdown')
-        const result = getParseResult(str)
+        this.dom.classList.add('markdown');
+        const result = getParseResult(str);
 
-        const diffResult = diffNode(this.prevRoot, result.root)
+        const diffResult = diffNode(this.prevRoot, result.root);
 
-        console.log(diffResult, result.root)
+        console.log(diffResult, result.root);
 
-        this.prevRoot = result.root
-        patch(diffResult, this.dom)
+        this.prevRoot = result.root;
+        patch(diffResult, this.dom);
 
-        const config = getConfig(this.config)
-        codeHighlight(this.dom, config)
+        const config = getConfig(this.config);
+        codeHighlight(this.dom, config);
     }
 }
 
 function markdown($dom, str, config) {
-    $dom.innerHTML = ''
-    $dom.classList.add('markdown')
-    const result = getParseResult(str)
-    console.log(result)
-    trans(result.root, $dom)
-    config = getConfig(config)
-    codeHighlight($dom, config)
+    $dom.innerHTML = '';
+    $dom.classList.add('markdown');
+    const result = getParseResult(str);
+    console.log(result);
+    trans(result.root, $dom);
+    config = getConfig(config);
+    codeHighlight($dom, config);
 }
 
 function markdownInfo(str) {
-    const { root, ...info } = getParseResult(str)
+    // eslint-disable-next-line no-unused-vars
+    const { root, ...info } = getParseResult(str);
     return info;
 }
 
@@ -144,4 +142,4 @@ export {
     getParseResult,
     markdown,
     markdownInfo, // 获取markdown info 【imgs, text】
-}
+};

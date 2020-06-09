@@ -4,17 +4,6 @@
  * AST也应该提供props update方法，用来处理props更新
  */
 
-// 获取节点上的所有文本信息
-function getText(node, str = '') {
-    if (node.type === 'text') {
-        str += node.value || ''
-    }
-    node.children && node.children.forEach((child) => {
-        str += getText(child)
-    })
-    return str
-}
-
 /**@typedef {import("../@type").ASTNode} ASTNode */
 
 // 支持ssr
@@ -28,8 +17,8 @@ function getText(node, str = '') {
  * @param {HTMLElement} $parent
  */
 export default function trans(node, $parent, option = {}) {
-    let ele // 接受子节点的元素
-    let realRoot // 真正的根节点，因为对于某些node，他的渲染逻辑不是一个简单的html标签，而是多个标签
+    let ele; // 接受子节点的元素
+    let realRoot; // 真正的根节点，因为对于某些node，他的渲染逻辑不是一个简单的html标签，而是多个标签
     let $getNode = () => ele;
 
     switch (node.type) {
@@ -38,112 +27,115 @@ export default function trans(node, $parent, option = {}) {
             // 处理iframe
             // 我们允许添加iframe，但是限制iframe的大小
             if (/^<iframe(\s*.+)*><\/iframe>$/.test(node.src.trim())) {
-                ele = document.createElement('div')
-                ele.className = 'audio'
+                ele = document.createElement('div');
+                ele.className = 'audio';
 
                 // https 不允许加载http的iframe
-                ele.innerHTML = node.src.replace('http://', '//')
+                ele.innerHTML = node.src.replace('http://', '//');
 
-                const iframe = ele.querySelector('iframe')
-                iframe.style.cssText += ';max-width: 100%; max-height: 60vw; overflow: hidden;'
+                const iframe = ele.querySelector('iframe');
+                iframe.style.cssText +=
+                    ';max-width: 100%; max-height: 60vw; overflow: hidden;';
             } else {
-                ele = document.createElement(node.type)
-                ele.src = node.src
-                ele.alt = node.alt
-                ele.controls = 'true'
+                ele = document.createElement(node.type);
+                ele.src = node.src;
+                ele.alt = node.alt;
+                ele.controls = 'true';
             }
-            break
+            break;
         }
-        case 'img':
-        {
-            const result = node.src.match(/\.(\d+)x(\d+)\./)
+        case 'img': {
+            const result = node.src.match(/\.(\d+)x(\d+)\./);
             if (result) {
-                const [width, height] = result.slice(1, 3)
+                const [width, height] = result.slice(1, 3);
                 // 图片宽高占位
-                const { src } = node
-                ele = document.createElement('div')
-                ele.style.cssText = `;position: relative; max-width: ${width}px; overflow: hidden; background: rgb(219, 221, 215);`
-                ele.innerHTML = `<div style="padding-top: ${height / width * 100}%;">
-                            <img ${LY.lazyLoad.caches.includes(src) ? `src="${src}" data-img-cache="true"` : ''}
-                                class="lazy-load-img img-loading"
-                                data-lazy-img="${node.src}"
-                                data-src="${node.src}"
-                                style="position: absolute; width: 100%; height: 100%; top: 0;" />
-                        </div>`
-                break
+                const { src } = node;
+                ele = document.createElement('div');
+                ele.style.cssText = `;position: relative; max-width: ${width}px; overflow: hidden; background: rgb(219, 221, 215);`;
+                ele.innerHTML = `<div style="padding-top: ${
+                    (height / width) * 100
+                }%;">
+                    <img ${
+                        // eslint-disable-next-line no-undef
+                        LY.lazyLoad.caches.includes(src)
+                            ? `src="${src}" data-img-cache="true"`
+                            : ''
+                    }
+                        class="lazy-load-img img-loading"
+                        data-lazy-img="${node.src}"
+                        data-src="${node.src}"
+                        style="position: absolute; width: 100%; height: 100%; top: 0;" />
+                </div>`;
+                break;
             } else {
-                ele = document.createElement(node.type)
-                ele.src = node.src
-                ele.alt = node.alt
-                break
+                ele = document.createElement(node.type);
+                ele.src = node.src;
+                ele.alt = node.alt;
+                break;
             }
         }
-        case 'text':
-        {
-            const text = node.value
-            ele = document.createTextNode(text)
-            break
+        case 'text': {
+            const text = node.value;
+            ele = document.createTextNode(text);
+            break;
         }
-        case 'br':
-        {
-            ele = document.createElement(node.type)
-            break
+        case 'br': {
+            ele = document.createElement(node.type);
+            break;
         }
-        case 'a':
-        {
-            ele = document.createElement(node.type)
-            ele.href = node.href
-            ele.target = '_blank'
-            break
+        case 'a': {
+            ele = document.createElement(node.type);
+            ele.href = node.href;
+            ele.target = '_blank';
+            break;
         }
-        case 'code':
-        {
-            ele = document.createElement('pre')
-            const code = document.createElement('code')
+        case 'code': {
+            ele = document.createElement('pre');
+            const code = document.createElement('code');
             // 需要在node上添加__update方法，方便更新属性
             node.__update = (key, newNode) => {
                 switch (key) {
                     case 'language': {
-                        code.className = ['highlight', newNode[key] || ''].join(' ')
+                        code.className = ['highlight', newNode[key] || ''].join(
+                            ' '
+                        );
                         break;
                     }
                     case 'value': {
-                        code.textContent = newNode[key] // 不能使用innerHTML
-                        break
+                        code.textContent = newNode[key]; // 不能使用innerHTML
+                        break;
                     }
                     default:
                         break;
                 }
-            }
-            node.__update('language', node)
-            node.__update('value', node)
-            ele.appendChild(code)
-            break
+            };
+            node.__update('language', node);
+            node.__update('value', node);
+            ele.appendChild(code);
+            break;
         }
         case 'inlineCode': {
-            ele = document.createElement('code')
-            ele.className = 'inlineCode'
-            break
+            ele = document.createElement('code');
+            ele.className = 'inlineCode';
+            break;
         }
-        case 'h1':
-        {
-            ele = document.createElement(node.type)
+        case 'h1': {
+            ele = document.createElement(node.type);
             // 添加一个
             // const a = document.createElement('a')
             // const id = getText(node)
             // a.href = `#${id}`
             // a.id = id
             // ele.appendChild(a)
-            break
+            break;
         }
-        case 'ul':
-        {
-            ele = document.createElement(node.type)
+        case 'ul': {
+            ele = document.createElement(node.type);
             node.__update = (key, nodeNode) => {
-                ele.style.cssText += `;list-style-type:${nodeNode[key]};`
-            }
-            node.__update('listStyleType', node)
-            break
+                ele.style.cssText += `;list-style-type:${nodeNode[key]};`;
+            };
+            node.__update('listStyleType', node);
+            break;
         }
         // 需要完成一个事情，就是添加和dom没有关系，我们可以包两层，包几层的结果是，删除和替换的时候需要特殊处理一下
         // 以避免dom没有删除或者替换干净
@@ -153,41 +145,40 @@ export default function trans(node, $parent, option = {}) {
          */
         case 'li-done':
         case 'li-todo': {
-            realRoot = document.createElement('li')
+            realRoot = document.createElement('li');
 
-            const tag = document.createElement('span')
-            tag.className = "list-todo-tag"
+            const tag = document.createElement('span');
+            tag.className = 'list-todo-tag';
             tag.textContent = node.type === 'li-done' ? '✅' : '🚧';
-            realRoot.appendChild(tag)
+            realRoot.appendChild(tag);
 
-            ele = document.createElement('span')
-            realRoot.appendChild(ele)
+            ele = document.createElement('span');
+            realRoot.appendChild(ele);
 
-            realRoot.style.cssText += `;list-style: none;`
+            realRoot.style.cssText += `;list-style: none;`;
 
-            $getNode = (type) => type === 'add' ? ele : realRoot
-            break
+            $getNode = (type) => (type === 'add' ? ele : realRoot);
+            break;
         }
-        default:
-        {
-            ele = document.createElement(node.type)
-            node.indent && (ele.style.cssText += ';padding-left: 2em;')
+        default: {
+            ele = document.createElement(node.type);
+            node.indent && (ele.style.cssText += ';padding-left: 2em;');
             // table表格需要设置边框
             if (node.type == 'table') {
-                ele.setAttribute('border', '1')
+                ele.setAttribute('border', '1');
             }
         }
     }
 
-    realRoot = realRoot || ele
-    node.$getNode = $getNode
+    realRoot = realRoot || ele;
+    node.$getNode = $getNode;
 
-    node.tag && ele.setAttribute('tag', node.tag)
-    node.children && node.children.forEach(child => trans(child, ele))
+    node.tag && ele.setAttribute('tag', node.tag);
+    node.children && node.children.forEach((child) => trans(child, ele));
 
     if (!(option.beforeAppend && option.beforeAppend(realRoot))) {
-        $parent.appendChild(realRoot)
+        $parent.appendChild(realRoot);
     }
 
-    return ele
+    return ele;
 }

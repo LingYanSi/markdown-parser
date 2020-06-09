@@ -9,7 +9,8 @@
     "build:cjs": "rollup src/index.js --format cjs --file dist/index.js",
     "build:umd": "rollup src/index.js --format iife --name \"lymd\" --file dist/lymd.min.js",
     "min": "babel dist --out-dir dist; minify dist/index.umd.js -d dist",
-    "build": "npm run build:cjs; npm run build:umd; npm run min"
+    "build": "npm run build:cjs; npm run build:umd; npm run min",
+    "lint": "prettier src --write; eslint src"
   },
   "repository": {
     "type": "git",
@@ -37,7 +38,10 @@
     "@babel/plugin-transform-modules-commonjs": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "anywhere": "^1.5.0",
+    "babel-eslint": "8",
     "babel-minify": "^0.5.0",
+    "eslint": "^7.2.0",
+    "prettier": "^2.0.5",
     "rollup": "^0.67.4"
   }
 }
