@@ -6,11 +6,11 @@
   "scripts": {
     "st": "anywhere -p 9001",
     "dev": "rollup src/index.js --watch --format cjs --file dist/index.js",
+    "lint": "prettier src --write; eslint src",
     "build:cjs": "rollup src/index.js --format cjs --file dist/index.js",
     "build:umd": "rollup src/index.js --format iife --name \"lymd\" --file dist/lymd.min.js",
     "min": "babel dist --out-dir dist; minify dist/index.umd.js -d dist",
-    "build": "npm run build:cjs; npm run build:umd; npm run min",
-    "lint": "prettier src --write; eslint src"
+    "build": "yarn lint; npm run build:cjs; npm run build:umd; npm run min"
   },
   "repository": {
     "type": "git",

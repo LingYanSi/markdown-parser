@@ -191,7 +191,7 @@ function diffArr(prevNode, nextNode) {
   var _nextNode$children = nextNode.children,
       nextArr = _nextNode$children === void 0 ? [] : _nextNode$children; // 如果不存在这个type类型，需要删除
 
-  var filterPrevArr = prevArr.filter(function (item, index) {
+  var filterPrevArr = prevArr.filter(function (item) {
     if (!nextArr.some(function (i) {
       return i.type === item.type;
     })) {
@@ -202,7 +202,7 @@ function diffArr(prevNode, nextNode) {
     return true;
   }); // 取有效元素
 
-  nextArr.forEach(function (item, moveTo) {
+  nextArr.forEach(function (item) {
     filterPrevArr.some(function (ele, index) {
       if (ele.type === item.type) {
         filterPrevArr[index] = {
@@ -400,7 +400,9 @@ function parseTable() {
   }
 
   return null;
-}
+} // - 一般list
+// - [x] todoList，两者都归于list类型
+
 
 var listReg = /^(\s*)([-+])(\s\[[\sx]?\])?/;
 /**
@@ -431,22 +433,11 @@ function sortUl(ul) {
 
     return null;
   };
-  /**
-   *
-  // - [] 待完成事项
-  // - [x] 完成事情
-  get todoItem() {
-      return /^-\ +\[\s*(x?)\s*\]\ +/
-  },
-   */
-
 
   ul.children.forEach(function (item) {
     var _item$raw$match = item.raw.match(listReg),
-        _item$raw$match2 = _slicedToArray(_item$raw$match, 3),
-        prevStr = _item$raw$match2[0],
-        space = _item$raw$match2[1],
-        char = _item$raw$match2[2];
+        _item$raw$match2 = _slicedToArray(_item$raw$match, 2),
+        space = _item$raw$match2[1];
 
     var ident = Math.floor(space.length / SPACE_PER); // ident 如果<= 当前的ident，那就需要向上切换
     // 如果比当前的ident大的话，就变成当前的子元素，并把current Node更改到
@@ -501,6 +492,7 @@ function parseUL() {
     var matchResult = line.match(listReg);
 
     if (matchResult) {
+      // eslint-disable-next-line no-unused-vars
       var _matchResult = _slicedToArray(matchResult, 4),
           prevStr = _matchResult[0],
           space = _matchResult[1],
@@ -548,9 +540,13 @@ function parseQuote(str, callback) {
 
     line = _getNextLine12[0];
     str = _getNextLine12[1];
-    index += line.length;
+    index += line.length; // 使用两个换行作为结束符
 
-    if (!line.trim()) {
+    var _getNextLine13 = getNextLine(str),
+        _getNextLine14 = _slicedToArray(_getNextLine13, 1),
+        nextline = _getNextLine14[0];
+
+    if (!line.trim() && !nextline.trim()) {
       break;
     }
   }
@@ -654,7 +650,6 @@ var Reg = {
 function parser() {
   var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
   var defaultNode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-  // str += '\n\n'
   var node = defaultNode || {
     children: [],
     type: 'root'
@@ -895,7 +890,6 @@ function parser() {
           content = _ref5.content;
       var h = {
         type: 'queto',
-        // tag,
         children: []
       };
       changeCurrentNode(h);
@@ -904,25 +898,7 @@ function parser() {
     })) {
       next();
       return;
-    } // 引用
-    // if (Reg.queto.test(str)) {
-    //     const [all, match] = str.match(Reg.queto)
-    //     const [tag, leftStr] = getMatchResult(match, '[', ']')
-    //     const h = {
-    //         type: 'queto',
-    //         tag,
-    //         children: [],
-    //     }
-    //     changeCurrentNode(h)
-    //     h.children= parser(leftStr.replace(/^\s*\n/, ''), h).children
-    //     changeCurrentNode({
-    //         type: 'br',
-    //     })
-    //     slice(all)
-    //     next()
-    //     return
-    // }
-    // code
+    } // code
 
 
     if (parseBlockCode(str, function (_ref6) {
@@ -1109,6 +1085,7 @@ function patch() {
         {
           var $realContainer = nextNode.__parent && nextNode.__parent.$getNode(item.type) || $container;
           trans(nextNode, $realContainer, {
+            // 自定义新节点的插入位置，而不是所有的插在末尾处
             beforeAppend: function beforeAppend(ele) {
               var ref = $realContainer.childNodes[item.moveTo];
 
@@ -1284,7 +1261,8 @@ function trans(node, $parent) {
           var src = node.src;
           ele = document.createElement('div');
           ele.style.cssText = ";position: relative; max-width: ".concat(width, "px; overflow: hidden; background: rgb(219, 221, 215);");
-          ele.innerHTML = "<div style=\"padding-top: ".concat(height / width * 100, "%;\">\n                            <img ").concat(LY.lazyLoad.caches.includes(src) ? "src=\"".concat(src, "\" data-img-cache=\"true\"") : '', "\n                                class=\"lazy-load-img img-loading\"\n                                data-lazy-img=\"").concat(node.src, "\"\n                                data-src=\"").concat(node.src, "\"\n                                style=\"position: absolute; width: 100%; height: 100%; top: 0;\" />\n                        </div>");
+          ele.innerHTML = "<div style=\"padding-top: ".concat(height / width * 100, "%;\">\n                    <img ").concat( // eslint-disable-next-line no-undef
+          LY.lazyLoad.caches.includes(src) ? "src=\"".concat(src, "\" data-img-cache=\"true\"") : '', "\n                        class=\"lazy-load-img img-loading\"\n                        data-lazy-img=\"").concat(node.src, "\"\n                        data-src=\"").concat(node.src, "\"\n                        style=\"position: absolute; width: 100%; height: 100%; top: 0;\" />\n                </div>");
           break;
         } else {
           ele = document.createElement(node.type);
@@ -1392,7 +1370,7 @@ function trans(node, $parent) {
       {
         realRoot = document.createElement('li');
         var tag = document.createElement('span');
-        tag.className = "list-todo-tag";
+        tag.className = 'list-todo-tag';
         tag.textContent = node.type === 'li-done' ? '✅' : '🚧';
         realRoot.appendChild(tag);
         ele = document.createElement('span');
@@ -1498,9 +1476,9 @@ function loadAsset(url) {
       var _s2 = document.createElement('link');
 
       _s2.onload = onload;
-      _s2.type = "text/css";
-      _s2.rel = "stylesheet";
-      _s2.charset = "utf-8";
+      _s2.type = 'text/css';
+      _s2.rel = 'stylesheet';
+      _s2.charset = 'utf-8';
       _s2.href = url;
       document.head.appendChild(_s2);
     }
@@ -1575,6 +1553,7 @@ function markdown($dom, str, config) {
 }
 
 function markdownInfo(str) {
+  // eslint-disable-next-line no-unused-vars
   var _getParseResult = getParseResult(str),
       root = _getParseResult.root,
       info = _objectWithoutProperties(_getParseResult, ["root"]);
