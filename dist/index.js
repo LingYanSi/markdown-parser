@@ -410,7 +410,7 @@ var listReg = /^(\s*)([-+])(\s\[[\sx]?\])?/;
  */
 
 function sortUl(ul) {
-  var SPACE_PER = 5;
+  var SPACE_PER = 4;
 
   var newUl = _objectSpread({}, ul, {
     ident: -1,

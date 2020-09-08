@@ -105,7 +105,7 @@ const listReg = /^(\s*)([-+])(\s\[[\sx]?\])?/;
  * 父组件一路向上查询，只关心父节点，不关心兄弟节点
  */
 function sortUl(ul) {
-    const SPACE_PER = 5;
+    const SPACE_PER = 4;
     const newUl = {
         ...ul,
         ident: -1,
