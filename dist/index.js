@@ -1531,7 +1531,6 @@ function () {
       this.dom.classList.add('markdown');
       var result = getParseResult(str);
       var diffResult = diffNode(this.prevRoot, result.root);
-      console.log(diffResult, result.root);
       this.prevRoot = result.root;
       patch(diffResult, this.dom);
       var config = getConfig(this.config);
@@ -1546,7 +1545,6 @@ function markdown($dom, str, config) {
   $dom.innerHTML = '';
   $dom.classList.add('markdown');
   var result = getParseResult(str);
-  console.log(result);
   trans(result.root, $dom);
   config = getConfig(config);
   codeHighlight($dom, config);

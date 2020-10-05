@@ -105,10 +105,7 @@ class Markdown {
     update(str) {
         this.dom.classList.add('markdown');
         const result = getParseResult(str);
-
         const diffResult = diffNode(this.prevRoot, result.root);
-
-        console.log(diffResult, result.root);
 
         this.prevRoot = result.root;
         patch(diffResult, this.dom);
@@ -122,7 +119,6 @@ function markdown($dom, str, config) {
     $dom.innerHTML = '';
     $dom.classList.add('markdown');
     const result = getParseResult(str);
-    console.log(result);
     trans(result.root, $dom);
     config = getConfig(config);
     codeHighlight($dom, config);
