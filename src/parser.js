@@ -41,7 +41,7 @@ export const Reg = {
     },
     // --- 分割线
     get hr() {
-        return /(^-{3,}\n)/;
+        return /(^-{3,}\n|^-{3,}$)/;
     },
     // ~~中划线~~
     get lineThrough() {
@@ -310,6 +310,20 @@ export function parser(str = '', defaultNode = null) {
             return;
         }
 
+        // hr
+        if (Reg.hr.test(str)) {
+            const [all] = str.match(Reg.hr) || [];
+            if (all !== undefined) {
+                changeCurrentNode({
+                    type: 'hr',
+                    children: [],
+                });
+            }
+            slice(all);
+            next();
+            return;
+        }
+
         if (
             parseQuote(str, ({ raw, content }) => {
                 const h = {
@@ -430,20 +444,6 @@ export function parser(str = '', defaultNode = null) {
                 slice(result.raw);
             })
         ) {
-            next();
-            return;
-        }
-
-        // hr
-        if (Reg.hr.test(str)) {
-            const [all] = str.match(Reg.hr) || [];
-            if (all !== undefined) {
-                changeCurrentNode({
-                    type: 'hr',
-                    children: [],
-                });
-            }
-            slice(all);
             next();
             return;
         }
