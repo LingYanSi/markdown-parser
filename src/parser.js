@@ -411,7 +411,7 @@ export function parser(str = '', defaultNode = null) {
                                 () => {
                                     item.forEach((item) => {
                                         changeCurrentNode(
-                                            { type: 'th', children: [] },
+                                            { type: 'td', children: [] },
                                             () => {
                                                 handleText(item);
                                             }
