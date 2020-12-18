@@ -990,7 +990,7 @@ function parser() {
             }, function () {
               item.forEach(function (item) {
                 changeCurrentNode({
-                  type: 'th',
+                  type: 'td',
                   children: []
                 }, function () {
                   handleText(item);
