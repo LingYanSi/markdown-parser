@@ -1,15 +1,20 @@
-export class AST {
-    type: String
+export interface AST {
+    type: String,
     children: [AST]
 }
 
-export class ASTNode {
-    type: String
-    children: [ASTNode]
-    src: String
-    alt: String
-    language: String
-    value: String
+export interface ASTNode {
+    type: String,
+    children: ASTNode[],
+    value?: String,
+    src?: String,
+    alt?: String,
+    language?: String,
+    raw: {
+        start: Number,
+        end: Number,
+        text: String,
+    }
 }
 
 export class DiffResult {

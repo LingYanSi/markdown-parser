@@ -25,6 +25,7 @@ const NO_NEED_DIFF = [
     '__update',
     'children',
     'type',
+    'raw',
 ];
 
 /**

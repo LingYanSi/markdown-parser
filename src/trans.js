@@ -3,6 +3,7 @@
  * 转换结束后AST上需要有HTMLNode的引用，方便下次patch，对HTMLNode做增删改
  * AST也应该提供props update方法，用来处理props更新
  */
+import nodeType from './nodeType.js'
 
 /**@typedef {import("../@type").ASTNode} ASTNode */
 
@@ -22,8 +23,8 @@ export default function trans(node, $parent, option = {}) {
     let $getNode = () => ele;
 
     switch (node.type) {
-        case 'audio':
-        case 'video': {
+        case nodeType.audio:
+        case nodeType.video: {
             // 处理iframe
             // 我们允许添加iframe，但是限制iframe的大小
             if (/^<iframe(\s*.+)*><\/iframe>$/.test(node.src.trim())) {
@@ -44,7 +45,7 @@ export default function trans(node, $parent, option = {}) {
             }
             break;
         }
-        case 'img': {
+        case nodeType.img: {
             const result = node.src.match(/\.(\d+)x(\d+)\./);
             if (result) {
                 const [width, height] = result.slice(1, 3);
@@ -74,22 +75,22 @@ export default function trans(node, $parent, option = {}) {
                 break;
             }
         }
-        case 'text': {
-            const text = node.value;
-            ele = document.createTextNode(text);
-            break;
-        }
-        case 'br': {
-            ele = document.createElement(node.type);
-            break;
-        }
-        case 'a': {
+        case nodeType.url: {
             ele = document.createElement(node.type);
             ele.href = node.href;
             ele.target = '_blank';
             break;
         }
-        case 'code': {
+        case nodeType.text: {
+            const text = node.value;
+            ele = document.createTextNode(text);
+            break;
+        }
+        case nodeType.br: {
+            ele = document.createElement(node.type);
+            break;
+        }
+        case nodeType.code: {
             ele = document.createElement('pre');
             const code = document.createElement('code');
             // 需要在node上添加__update方法，方便更新属性
@@ -114,13 +115,13 @@ export default function trans(node, $parent, option = {}) {
             ele.appendChild(code);
             break;
         }
-        case 'inlineCode': {
+        case nodeType.inlineCode: {
             ele = document.createElement('code');
             ele.className = 'inlineCode';
             break;
         }
-        case 'h1': {
-            ele = document.createElement(node.type);
+        case nodeType.head: {
+            ele = document.createElement(`h${node.level}`);
             // 添加一个
             // const a = document.createElement('a')
             // const id = getText(node)
@@ -129,7 +130,7 @@ export default function trans(node, $parent, option = {}) {
             // ele.appendChild(a)
             break;
         }
-        case 'ul': {
+        case nodeType.ul: {
             ele = document.createElement(node.type);
             node.__update = (key, nodeNode) => {
                 ele.style.cssText += `;list-style-type:${nodeNode[key]};`;
@@ -164,7 +165,7 @@ export default function trans(node, $parent, option = {}) {
             ele = document.createElement(node.type);
             node.indent && (ele.style.cssText += ';padding-left: 2em;');
             // table表格需要设置边框
-            if (node.type == 'table') {
+            if (node.type == nodeType.table) {
                 ele.setAttribute('border', '1');
             }
         }

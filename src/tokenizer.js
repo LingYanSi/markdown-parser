@@ -1,3 +1,5 @@
+import nodeType from './nodeType.js'
+
 function getNextLine(ss) {
     const index = ss.indexOf('\n');
     if (index > -1) {
@@ -44,7 +46,9 @@ export function parseBlockCode(str = '', callback) {
 
 function treeShake(lineStr = '') {
     return lineStr.split('|').filter((i, index, arr) => {
-        return index === 0 || index === arr.length - 1 ? i.trim() : i;
+        return (index === 0 || index === arr.length - 1) ? i.trim() : i;
+    }).map((i) => {
+        return i.replace(/\s+$/g, '');
     });
 }
 
@@ -135,7 +139,7 @@ function sortUl(ul) {
         item.ident = ident;
         item.ul = {
             // li可能会嵌套列表
-            type: 'ul',
+            type: nodeType.ul,
             children: [],
         };
         const parent = findParent(ident);
@@ -161,7 +165,7 @@ export function parseUL(str = '', callback) {
     let index = 0;
     let line = '';
     const ul = {
-        type: 'ul',
+        type: nodeType.ul,
         children: [],
     };
     while (str) {
@@ -179,14 +183,14 @@ export function parseUL(str = '', callback) {
             const [prevStr, space, char, todoStr] = matchResult;
             const child = line.slice(prevStr.length);
 
-            let todoType = '';
+            let todoType = nodeType.li;
             if (todoStr) {
-                todoType = todoStr.indexOf('x') > -1 ? 'done' : 'todo';
+                todoType = todoStr.indexOf('x') > -1 ? nodeType.li_done : nodeType.li_todo;
             }
 
             // 判断类型是不是todo
             ul.children.push({
-                type: todoType ? `li-${todoType}` : 'li',
+                type: todoType,
                 char,
                 raw: line,
                 children: [child],

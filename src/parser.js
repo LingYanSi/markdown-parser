@@ -4,6 +4,7 @@ import {
     parseUL,
     parseQuote,
 } from './tokenizer.js';
+import nodeType, { Reg } from './nodeType.js'
 
 /*
  * 1. 关键字 \n# \n- \n+ \n ```language ```
@@ -20,59 +21,7 @@ import {
 
 /** @typedef {import("./../@type/index").AST} AST */
 
-export const Reg = {
-    // > 引用
-    get queto() {
-        return /^>(((?!\n\n)[\s\S])*)\n\n/;
-    },
-    // # 标题
-    get head() {
-        return /^\s*(#{1,6})([^\n]*)\n?/;
-    },
-    // `行内code`
-    get inlineCode() {
-        return /^`([^`]*)`/;
-    },
-    get br() {
-        return /^\n/;
-    },
-    get text() {
-        return /^[^\n]*\n?/;
-    },
-    // --- 分割线
-    get hr() {
-        return /(^-{3,}\n|^-{3,}$)/;
-    },
-    // ~~中划线~~
-    get lineThrough() {
-        return /^~{2}(((?!~{2}).)*)~{2}/;
-    },
-    // *倾斜*
-    get italic() {
-        return /^\*(((?!\*).)*)\*/;
-    },
-    // **加粗**
-    get blod() {
-        // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
-        return /^\*{2}(((?!\*{2}).)*)\*{2}/;
-    },
-    // !!![视频](url)
-    get video() {
-        return /^!{3}\[([^\]]*)\]\(([^)]+)\)/;
-    },
-    // !![音频](url)
-    get audio() {
-        return /^!{2}\[([^\]]*)\]\(([^)]+)\)/;
-    },
-    // ![图片](url)
-    get img() {
-        return /^!\[([^\]]*)\]\(([^)]+)\)/;
-    },
-    // [连接描述](url地址)
-    get url() {
-        return /^\[([^\]]+)\]\(([^)]+)\)/;
-    },
-};
+// 向node节点上添加元数据
 
 /**
  * [parser 获取AST]
@@ -81,10 +30,20 @@ export const Reg = {
  * @return {AST}          [ast tree]
  */
 export function parser(str = '', defaultNode = null) {
-    let node = defaultNode || {
+    let IX = 0
+    function addRaw(node, all = '') {
+        node.raw = {
+            text: all,
+            start: IX,
+            end: IX + all.length,
+        }
+        return node
+    }
+
+    let node = defaultNode || addRaw({
         children: [],
-        type: 'root',
-    };
+        type: nodeType.root,
+    }, str);
 
     /**
      * 更改切换上下文，方便快速添加children
@@ -104,6 +63,7 @@ export function parser(str = '', defaultNode = null) {
 
     function slice(all = '') {
         str = str.slice(all.length);
+        IX += all.length
     }
 
     /**
@@ -120,12 +80,12 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.url.test(textStr)) {
             handleText(
                 textStr.replace(Reg.url, (m, $text, $href) => {
-                    const child = {
-                        type: 'a',
+                    const child = addRaw({
+                        type: nodeType.url,
                         href: $href,
-                        value: $text,
+                        alt: $text,
                         children: [],
-                    };
+                    }, m);
                     changeCurrentNode(child, () => {
                         handleText($text);
                     });
@@ -139,10 +99,10 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.blod.test(textStr)) {
             handleText(
                 textStr.replace(Reg.blod, (m, $0) => {
-                    const child = {
-                        type: 'b',
+                    const child = addRaw({
+                        type: nodeType.blod,
                         children: [],
-                    };
+                    }, m);
                     changeCurrentNode(child, () => {
                         handleText($0);
                     });
@@ -156,10 +116,10 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.lineThrough.test(textStr)) {
             handleText(
                 textStr.replace(Reg.lineThrough, (m, $0) => {
-                    const child = {
-                        type: 'lineThrough',
+                    const child = addRaw({
+                        type: nodeType.linethrough,
                         children: [],
-                    };
+                    }, m);
                     changeCurrentNode(child, () => {
                         handleText($0);
                     });
@@ -173,10 +133,10 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.italic.test(textStr)) {
             handleText(
                 textStr.replace(Reg.italic, (m, $0) => {
-                    const child = {
-                        type: 'i',
+                    const child = addRaw({
+                        type: nodeType.italic,
                         children: [],
-                    };
+                    }, m);
                     changeCurrentNode(child, () => {
                         handleText($0);
                     });
@@ -190,10 +150,10 @@ export function parser(str = '', defaultNode = null) {
             handleText(
                 textStr.replace(Reg.inlineCode, (m, $0) => {
                     if ($0) {
-                        const child = {
-                            type: 'inlineCode',
+                        const child = addRaw({
+                            type: nodeType.inlineCode,
                             children: [],
-                        };
+                        }, m);
                         changeCurrentNode(child, () => {
                             handleText($0);
                         });
@@ -207,11 +167,11 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.video.test(textStr)) {
             handleText(
                 textStr.replace(Reg.video, (m, $alt, $src) => {
-                    changeCurrentNode({
-                        type: 'video',
+                    changeCurrentNode(addRaw({
+                        type: nodeType.video,
                         src: $src,
                         alt: $alt,
-                    });
+                    }, m));
                     return '';
                 })
             );
@@ -221,11 +181,11 @@ export function parser(str = '', defaultNode = null) {
         // 音频
         if (Reg.audio.test(textStr)) {
             textStr = textStr.replace(Reg.audio, (m, $alt, $src) => {
-                changeCurrentNode({
-                    type: 'audio',
+                changeCurrentNode(addRaw({
+                    type: nodeType.audio,
                     src: $src,
                     alt: $alt,
-                });
+                }, m));
                 return '';
             });
             handleText(textStr);
@@ -236,11 +196,11 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.img.test(textStr)) {
             handleText(
                 textStr.replace(Reg.img, (m, $alt, $src) => {
-                    changeCurrentNode({
-                        type: 'img',
+                    changeCurrentNode(addRaw({
+                        type: nodeType.img,
                         src: $src,
                         alt: $alt,
-                    });
+                    }, m));
                     return '';
                 })
             );
@@ -249,20 +209,20 @@ export function parser(str = '', defaultNode = null) {
 
         // 换行
         if (textStr[0] == '\n') {
-            changeCurrentNode({ type: 'br' });
+            changeCurrentNode(addRaw({ type: nodeType.br }, textStr[0]));
             handleText(textStr.slice(1));
             return;
         }
 
         // 文本,如果前一个元素是文本元素，就追加上去，反则新增文本元素
         const lastChild = node.children[node.children.length - 1];
-        if (lastChild && lastChild.type === 'text') {
+        if (lastChild && lastChild.type === nodeType.text) {
             lastChild.value += textStr[0];
         } else {
-            changeCurrentNode({
-                type: 'text',
+            changeCurrentNode(addRaw({
+                type: nodeType.text,
                 value: handleTranslationCode(textStr[0]),
-            });
+            }, ''));
         }
         handleText(textStr.slice(1));
     }
@@ -289,7 +249,7 @@ export function parser(str = '', defaultNode = null) {
         // 换行符
         if (Reg.br.test(str)) {
             const [all] = str.match(Reg.br);
-            changeCurrentNode({ type: 'br' });
+            changeCurrentNode(addRaw({ type: nodeType.br }, all));
             slice(all);
             next();
             return;
@@ -298,10 +258,10 @@ export function parser(str = '', defaultNode = null) {
         // 标题
         if (Reg.head.test(str)) {
             const [all, head, content] = str.match(Reg.head) || [];
-            const child = {
-                type: `h${head.length}`,
+            const child = addRaw({
+                type: nodeType[`h${head.length}`],
                 children: [],
-            };
+            }, all);
             changeCurrentNode(child, () => {
                 handleText(content);
             });
@@ -314,10 +274,10 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.hr.test(str)) {
             const [all] = str.match(Reg.hr) || [];
             if (all !== undefined) {
-                changeCurrentNode({
-                    type: 'hr',
+                changeCurrentNode(addRaw({
+                    type: nodeType.hr,
                     children: [],
-                });
+                }, all));
             }
             slice(all);
             next();
@@ -326,10 +286,10 @@ export function parser(str = '', defaultNode = null) {
 
         if (
             parseQuote(str, ({ raw, content }) => {
-                const h = {
-                    type: 'queto',
+                const h = addRaw({
+                    type: nodeType.queto,
                     children: [],
-                };
+                }, raw);
                 changeCurrentNode(h);
                 h.children = parser(content, h).children;
                 slice(raw);
@@ -342,11 +302,11 @@ export function parser(str = '', defaultNode = null) {
         // code
         if (
             parseBlockCode(str, ({ language, content, raw }) => {
-                changeCurrentNode({
-                    type: 'code',
+                changeCurrentNode(addRaw({
+                    type: nodeType.code,
                     language,
                     value: content,
-                });
+                }, raw));
                 slice(raw);
             })
         ) {
@@ -367,7 +327,7 @@ export function parser(str = '', defaultNode = null) {
                     const { children, deep } = ul;
 
                     const child = {
-                        type: 'ul',
+                        type: nodeType.ul,
                         listStyleType:
                             children[0].char === '+'
                                 ? DECIMAL
@@ -403,13 +363,13 @@ export function parser(str = '', defaultNode = null) {
         // tbale
         if (
             parseTable(str, (result) => {
-                changeCurrentNode({ type: 'table', children: [] }, () => {
+                changeCurrentNode(addRaw({ type: nodeType.table, children: [] }, result.raw), () => {
                     // table头
-                    changeCurrentNode({ type: 'thead', children: [] }, () => {
-                        changeCurrentNode({ type: 'tr', children: [] }, () => {
+                    changeCurrentNode(addRaw({ type: nodeType.thead, children: [] }), () => {
+                        changeCurrentNode(addRaw({ type: nodeType.tr, children: [] }), () => {
                             result.table.head.forEach((item) => {
                                 changeCurrentNode(
-                                    { type: 'th', children: [] },
+                                    addRaw({ type: nodeType.th, children: [] }, item),
                                     () => {
                                         handleText(item);
                                     }
@@ -418,14 +378,14 @@ export function parser(str = '', defaultNode = null) {
                         });
                     });
 
-                    changeCurrentNode({ type: 'tbody', children: [] }, () => {
+                    changeCurrentNode(addRaw({ type: nodeType.tbody, children: [] }), () => {
                         result.table.body.forEach((item) => {
                             changeCurrentNode(
-                                { type: 'tr', children: [] },
+                                addRaw({ type: nodeType.tr, children: [] }),
                                 () => {
                                     item.forEach((item) => {
                                         changeCurrentNode(
-                                            { type: 'td', children: [] },
+                                            addRaw({ type: nodeType.td, children: [] }, item),
                                             () => {
                                                 handleText(item);
                                             }
@@ -437,9 +397,9 @@ export function parser(str = '', defaultNode = null) {
                     });
                 });
 
-                changeCurrentNode({
-                    type: 'br',
-                });
+                changeCurrentNode(addRaw({
+                    type: nodeType.br,
+                }, '\n\n'));
 
                 slice(result.raw);
             })

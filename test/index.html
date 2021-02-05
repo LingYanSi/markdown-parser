@@ -84,12 +84,20 @@
         import { markdown, Markdown, getParseResult } from '../src/index.js'
         import { diffNode } from '../src/diff.js'
 
+        import formater from '../src/formater.js'
+        import Hotkey from './hotkeys/index.js'
+
         window.getParseResult = getParseResult
         $('textarea').value = localStorage.getItem('markdown') || ``
 
         function $(s) {
             return document.querySelector(s)
         }
+
+        new Hotkey($('textarea')).on('cmd+b', () => {
+            // 格式化
+            $('textarea').value = formater($('textarea').value)
+        })
 
         const useUpdate = true
         let md = new Markdown($('#render'), {
@@ -140,52 +148,6 @@
         $('#full').addEventListener('click', () => {
             $('textarea').classList.toggle('hide')
         })
-
-        // function hotKey(dom = document.body, keys, callback) {
-        //     let cacheKeys = []
-        //     const maps = {
-        //         '91': 'ctrl',
-        //         '83': 's',
-        //         '13': 'enter',
-        //     }
-
-        //     function clear() {
-        //         if (cacheKeys[0] !== maps[91]) {
-        //             cacheKeys = []
-        //         }
-        //     }
-
-        //     function keyDown(event) {
-        //         const { keyCode } = event
-        //         clear()
-
-        //         // navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey
-        //         if (maps[keyCode] && !cacheKeys.includes(maps[keyCode])) {
-        //             cacheKeys.push(maps[keyCode])
-        //         }
-
-        //         console.log(cacheKeys)
-
-        //         if (cacheKeys.join('+') === keys) {
-        //             callback && callback()
-        //             event.preventDefault()
-        //             return
-        //         }
-        //     }
-
-        //     function keyUp({ keyCode }) {
-        //         cacheKeys = cacheKeys.filter(i => i !== keyCode)
-        //         clear()
-        //     }
-
-        //     dom.addEventListener('keydown', keyDown)
-        //     dom.addEventListener('keyup', keyUp)
-        // }
-
-        // hotKey(window, 'ctrl+s', render)
-        // hotKey(window, 'ctrl+enter', () => {
-        //     $('textarea').classList.toggle('hide')
-        // })
     </script>
 </body>
 </html>
