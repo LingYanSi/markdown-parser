@@ -4,6 +4,7 @@
  * AST也应该提供props update方法，用来处理props更新
  */
 import nodeType from './nodeType.js'
+import { getParserNodeInfo } from './helper.js'
 
 /**@typedef {import("../@type").ASTNode} ASTNode */
 
@@ -160,6 +161,19 @@ export default function trans(node, $parent, option = {}) {
 
             $getNode = (type) => (type === 'add' ? ele : realRoot);
             break;
+        }
+        case nodeType.h3:
+        case nodeType.h2:
+        case nodeType.h1: {
+            ele = document.createElement(node.type);
+            // 为标题添加id，以支持锚点
+            node.__update = (key, newNode) => {
+                if (key === 'id') {
+                    ele.id = getParserNodeInfo(newNode).text.trim()
+                }
+            }
+            node.__update('id', node);
+            break
         }
         default: {
             ele = document.createElement(node.type);

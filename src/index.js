@@ -2,29 +2,7 @@ import { diffNode } from './diff.js';
 import { parser } from './parser.js';
 import patch from './patch.js';
 import trans from './trans.js';
-
-/**
- * 遍历节点获取Node内的图片、文本信息
- * @param  {Node} node [markdown AST]
- */
-function getParserNodeInfo(node) {
-    let text = '';
-    const imgs = [];
-    function next(mNode) {
-        if (mNode.type == 'text') {
-            text += mNode.value || '';
-        }
-        if (mNode.type == 'img') {
-            imgs.push(mNode.src);
-        }
-        mNode.children && mNode.children.forEach(next);
-    }
-    next(node);
-    return {
-        text,
-        imgs,
-    };
-}
+import { getParserNodeInfo } from './helper.js'
 
 const cache = {};
 

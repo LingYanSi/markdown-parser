@@ -31,11 +31,11 @@ import nodeType, { Reg } from './nodeType.js'
  */
 export function parser(str = '', defaultNode = null) {
     let IX = 0
-    function addRaw(node, all = '') {
+    function addRaw(node, text = '') {
         node.raw = {
-            text: all,
+            text,
             start: IX,
-            end: IX + all.length,
+            end: IX + text.length,
         }
         return node
     }
@@ -260,6 +260,7 @@ export function parser(str = '', defaultNode = null) {
             const [all, head, content] = str.match(Reg.head) || [];
             const child = addRaw({
                 type: nodeType[`h${head.length}`],
+                id: content,
                 children: [],
             }, all);
             changeCurrentNode(child, () => {

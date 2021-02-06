@@ -60,3 +60,26 @@ export function getMatchResult(str = '', startTag = '[', endTag = ']') {
 
     return [undefined, str];
 }
+
+/**
+ * 遍历节点获取Node内的图片、文本信息
+ * @param  {Node} node [markdown AST]
+ */
+export function getParserNodeInfo(node) {
+    let text = '';
+    const imgs = [];
+    function next(mNode) {
+        if (mNode.type == 'text') {
+            text += mNode.value || '';
+        }
+        if (mNode.type == 'img') {
+            imgs.push(mNode.src);
+        }
+        mNode.children && mNode.children.forEach(next);
+    }
+    next(node);
+    return {
+        text,
+        imgs,
+    };
+}
