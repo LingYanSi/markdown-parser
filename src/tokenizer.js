@@ -1,4 +1,4 @@
-import nodeType from './nodeType.js'
+import nodeType from './nodeType.js';
 
 function getNextLine(ss) {
     const index = ss.indexOf('\n');
@@ -45,11 +45,14 @@ export function parseBlockCode(str = '', callback) {
 }
 
 function treeShake(lineStr = '') {
-    return lineStr.split('|').filter((i, index, arr) => {
-        return (index === 0 || index === arr.length - 1) ? i.trim() : i;
-    }).map((i) => {
-        return i.replace(/\s+$/g, '');
-    });
+    return lineStr
+        .split('|')
+        .filter((i, index, arr) => {
+            return index === 0 || index === arr.length - 1 ? i.trim() : i;
+        })
+        .map((i) => {
+            return i.replace(/\s+$/g, '');
+        });
 }
 
 export function parseTable(str = '', callback) {
@@ -185,7 +188,10 @@ export function parseUL(str = '', callback) {
 
             let todoType = nodeType.li;
             if (todoStr) {
-                todoType = todoStr.indexOf('x') > -1 ? nodeType.li_done : nodeType.li_todo;
+                todoType =
+                    todoStr.indexOf('x') > -1
+                        ? nodeType.li_done
+                        : nodeType.li_todo;
             }
 
             // 判断类型是不是todo

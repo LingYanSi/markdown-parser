@@ -34,8 +34,7 @@ export default {
     li: 'li',
     li_done: 'li-done',
     li_todo: 'li-todo',
-}
-
+};
 
 export const Reg = {
     // > 引用

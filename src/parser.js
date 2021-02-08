@@ -4,7 +4,7 @@ import {
     parseUL,
     parseQuote,
 } from './tokenizer.js';
-import nodeType, { Reg } from './nodeType.js'
+import nodeType, { Reg } from './nodeType.js';
 
 /*
  * 1. 关键字 \n# \n- \n+ \n ```language ```
@@ -30,20 +30,25 @@ import nodeType, { Reg } from './nodeType.js'
  * @return {AST}          [ast tree]
  */
 export function parser(str = '', defaultNode = null) {
-    let IX = 0
+    let IX = 0;
     function addRaw(node, text = '') {
         node.raw = {
             text,
             start: IX,
             end: IX + text.length,
-        }
-        return node
+        };
+        return node;
     }
 
-    let node = defaultNode || addRaw({
-        children: [],
-        type: nodeType.root,
-    }, str);
+    let node =
+        defaultNode ||
+        addRaw(
+            {
+                children: [],
+                type: nodeType.root,
+            },
+            str
+        );
 
     /**
      * 更改切换上下文，方便快速添加children
@@ -63,7 +68,7 @@ export function parser(str = '', defaultNode = null) {
 
     function slice(all = '') {
         str = str.slice(all.length);
-        IX += all.length
+        IX += all.length;
     }
 
     /**
@@ -80,12 +85,15 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.url.test(textStr)) {
             handleText(
                 textStr.replace(Reg.url, (m, $text, $href) => {
-                    const child = addRaw({
-                        type: nodeType.url,
-                        href: $href,
-                        alt: $text,
-                        children: [],
-                    }, m);
+                    const child = addRaw(
+                        {
+                            type: nodeType.url,
+                            href: $href,
+                            alt: $text,
+                            children: [],
+                        },
+                        m
+                    );
                     changeCurrentNode(child, () => {
                         handleText($text);
                     });
@@ -99,10 +107,13 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.blod.test(textStr)) {
             handleText(
                 textStr.replace(Reg.blod, (m, $0) => {
-                    const child = addRaw({
-                        type: nodeType.blod,
-                        children: [],
-                    }, m);
+                    const child = addRaw(
+                        {
+                            type: nodeType.blod,
+                            children: [],
+                        },
+                        m
+                    );
                     changeCurrentNode(child, () => {
                         handleText($0);
                     });
@@ -116,10 +127,13 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.lineThrough.test(textStr)) {
             handleText(
                 textStr.replace(Reg.lineThrough, (m, $0) => {
-                    const child = addRaw({
-                        type: nodeType.linethrough,
-                        children: [],
-                    }, m);
+                    const child = addRaw(
+                        {
+                            type: nodeType.linethrough,
+                            children: [],
+                        },
+                        m
+                    );
                     changeCurrentNode(child, () => {
                         handleText($0);
                     });
@@ -133,10 +147,13 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.italic.test(textStr)) {
             handleText(
                 textStr.replace(Reg.italic, (m, $0) => {
-                    const child = addRaw({
-                        type: nodeType.italic,
-                        children: [],
-                    }, m);
+                    const child = addRaw(
+                        {
+                            type: nodeType.italic,
+                            children: [],
+                        },
+                        m
+                    );
                     changeCurrentNode(child, () => {
                         handleText($0);
                     });
@@ -150,10 +167,13 @@ export function parser(str = '', defaultNode = null) {
             handleText(
                 textStr.replace(Reg.inlineCode, (m, $0) => {
                     if ($0) {
-                        const child = addRaw({
-                            type: nodeType.inlineCode,
-                            children: [],
-                        }, m);
+                        const child = addRaw(
+                            {
+                                type: nodeType.inlineCode,
+                                children: [],
+                            },
+                            m
+                        );
                         changeCurrentNode(child, () => {
                             handleText($0);
                         });
@@ -167,11 +187,16 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.video.test(textStr)) {
             handleText(
                 textStr.replace(Reg.video, (m, $alt, $src) => {
-                    changeCurrentNode(addRaw({
-                        type: nodeType.video,
-                        src: $src,
-                        alt: $alt,
-                    }, m));
+                    changeCurrentNode(
+                        addRaw(
+                            {
+                                type: nodeType.video,
+                                src: $src,
+                                alt: $alt,
+                            },
+                            m
+                        )
+                    );
                     return '';
                 })
             );
@@ -181,11 +206,16 @@ export function parser(str = '', defaultNode = null) {
         // 音频
         if (Reg.audio.test(textStr)) {
             textStr = textStr.replace(Reg.audio, (m, $alt, $src) => {
-                changeCurrentNode(addRaw({
-                    type: nodeType.audio,
-                    src: $src,
-                    alt: $alt,
-                }, m));
+                changeCurrentNode(
+                    addRaw(
+                        {
+                            type: nodeType.audio,
+                            src: $src,
+                            alt: $alt,
+                        },
+                        m
+                    )
+                );
                 return '';
             });
             handleText(textStr);
@@ -196,11 +226,16 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.img.test(textStr)) {
             handleText(
                 textStr.replace(Reg.img, (m, $alt, $src) => {
-                    changeCurrentNode(addRaw({
-                        type: nodeType.img,
-                        src: $src,
-                        alt: $alt,
-                    }, m));
+                    changeCurrentNode(
+                        addRaw(
+                            {
+                                type: nodeType.img,
+                                src: $src,
+                                alt: $alt,
+                            },
+                            m
+                        )
+                    );
                     return '';
                 })
             );
@@ -219,10 +254,15 @@ export function parser(str = '', defaultNode = null) {
         if (lastChild && lastChild.type === nodeType.text) {
             lastChild.value += textStr[0];
         } else {
-            changeCurrentNode(addRaw({
-                type: nodeType.text,
-                value: handleTranslationCode(textStr[0]),
-            }, ''));
+            changeCurrentNode(
+                addRaw(
+                    {
+                        type: nodeType.text,
+                        value: handleTranslationCode(textStr[0]),
+                    },
+                    ''
+                )
+            );
         }
         handleText(textStr.slice(1));
     }
@@ -258,11 +298,14 @@ export function parser(str = '', defaultNode = null) {
         // 标题
         if (Reg.head.test(str)) {
             const [all, head, content] = str.match(Reg.head) || [];
-            const child = addRaw({
-                type: nodeType[`h${head.length}`],
-                id: content,
-                children: [],
-            }, all);
+            const child = addRaw(
+                {
+                    type: nodeType[`h${head.length}`],
+                    id: content,
+                    children: [],
+                },
+                all
+            );
             changeCurrentNode(child, () => {
                 handleText(content);
             });
@@ -275,10 +318,15 @@ export function parser(str = '', defaultNode = null) {
         if (Reg.hr.test(str)) {
             const [all] = str.match(Reg.hr) || [];
             if (all !== undefined) {
-                changeCurrentNode(addRaw({
-                    type: nodeType.hr,
-                    children: [],
-                }, all));
+                changeCurrentNode(
+                    addRaw(
+                        {
+                            type: nodeType.hr,
+                            children: [],
+                        },
+                        all
+                    )
+                );
             }
             slice(all);
             next();
@@ -287,10 +335,13 @@ export function parser(str = '', defaultNode = null) {
 
         if (
             parseQuote(str, ({ raw, content }) => {
-                const h = addRaw({
-                    type: nodeType.queto,
-                    children: [],
-                }, raw);
+                const h = addRaw(
+                    {
+                        type: nodeType.queto,
+                        children: [],
+                    },
+                    raw
+                );
                 changeCurrentNode(h);
                 h.children = parser(content, h).children;
                 slice(raw);
@@ -303,11 +354,16 @@ export function parser(str = '', defaultNode = null) {
         // code
         if (
             parseBlockCode(str, ({ language, content, raw }) => {
-                changeCurrentNode(addRaw({
-                    type: nodeType.code,
-                    language,
-                    value: content,
-                }, raw));
+                changeCurrentNode(
+                    addRaw(
+                        {
+                            type: nodeType.code,
+                            language,
+                            value: content,
+                        },
+                        raw
+                    )
+                );
                 slice(raw);
             })
         ) {
@@ -364,43 +420,75 @@ export function parser(str = '', defaultNode = null) {
         // tbale
         if (
             parseTable(str, (result) => {
-                changeCurrentNode(addRaw({ type: nodeType.table, children: [] }, result.raw), () => {
-                    // table头
-                    changeCurrentNode(addRaw({ type: nodeType.thead, children: [] }), () => {
-                        changeCurrentNode(addRaw({ type: nodeType.tr, children: [] }), () => {
-                            result.table.head.forEach((item) => {
+                changeCurrentNode(
+                    addRaw({ type: nodeType.table, children: [] }, result.raw),
+                    () => {
+                        // table头
+                        changeCurrentNode(
+                            addRaw({ type: nodeType.thead, children: [] }),
+                            () => {
                                 changeCurrentNode(
-                                    addRaw({ type: nodeType.th, children: [] }, item),
+                                    addRaw({ type: nodeType.tr, children: [] }),
                                     () => {
-                                        handleText(item);
+                                        result.table.head.forEach((item) => {
+                                            changeCurrentNode(
+                                                addRaw(
+                                                    {
+                                                        type: nodeType.th,
+                                                        children: [],
+                                                    },
+                                                    item
+                                                ),
+                                                () => {
+                                                    handleText(item);
+                                                }
+                                            );
+                                        });
                                     }
                                 );
-                            });
-                        });
-                    });
+                            }
+                        );
 
-                    changeCurrentNode(addRaw({ type: nodeType.tbody, children: [] }), () => {
-                        result.table.body.forEach((item) => {
-                            changeCurrentNode(
-                                addRaw({ type: nodeType.tr, children: [] }),
-                                () => {
-                                    item.forEach((item) => {
-                                        changeCurrentNode(
-                                            addRaw({ type: nodeType.td, children: [] }, item),
-                                            () => {
-                                                handleText(item);
-                                            }
-                                        );
-                                    });
-                                }
-                            );
-                        });
-                    });
-                });
+                        changeCurrentNode(
+                            addRaw({ type: nodeType.tbody, children: [] }),
+                            () => {
+                                result.table.body.forEach((item) => {
+                                    changeCurrentNode(
+                                        addRaw({
+                                            type: nodeType.tr,
+                                            children: [],
+                                        }),
+                                        () => {
+                                            item.forEach((item) => {
+                                                changeCurrentNode(
+                                                    addRaw(
+                                                        {
+                                                            type: nodeType.td,
+                                                            children: [],
+                                                        },
+                                                        item
+                                                    ),
+                                                    () => {
+                                                        handleText(item);
+                                                    }
+                                                );
+                                            });
+                                        }
+                                    );
+                                });
+                            }
+                        );
+                    }
+                );
 
-                changeCurrentNode(addRaw({
-                    type: nodeType.br,
-                }, '\n\n'));
+                changeCurrentNode(
+                    addRaw(
+                        {
+                            type: nodeType.br,
+                        },
+                        '\n\n'
+                    )
+                );
 
                 slice(result.raw);
             })

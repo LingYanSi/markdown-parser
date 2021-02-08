@@ -53,7 +53,7 @@ Object.defineProperty(exports, '__esModule', {
 
 /** @typedef {import("./../@type/index").AST} AST */
 
-var NO_NEED_DIFF = ['$getNode', '__node', '__parent', '__update', 'children', 'type'];
+var NO_NEED_DIFF = ['$getNode', '__node', '__parent', '__update', 'children', 'type', 'raw'];
 /**
  * diff对象差异
  * @export
@@ -276,6 +276,106 @@ function diffArr(prevNode, nextNode) {
   // 2 早 [ 2 ] 中存在，保持不变
 }
 
+var nodeType = {
+  text: 'text',
+  url: 'a',
+  img: 'img',
+  video: 'video',
+  audio: 'audio',
+  inlineCode: 'inlineCode',
+  br: 'br',
+  hr: 'hr',
+  root: 'root',
+  blod: 'b',
+  italic: 'i',
+  linethrough: 'lineThrough',
+  // 标题
+  h1: 'h1',
+  h2: 'h2',
+  h3: 'h3',
+  h4: 'h4',
+  h5: 'h5',
+  h6: 'h6',
+  queto: 'queto',
+  code: 'code',
+  table: 'table',
+  thead: 'thead',
+  tbody: 'tbody',
+  tr: 'tr',
+  th: 'th',
+  td: 'td',
+  ul: 'ul',
+  li: 'li',
+  li_done: 'li-done',
+  li_todo: 'li-todo'
+};
+var Reg = {
+  // > 引用
+  get queto() {
+    return /^>(((?!\n\n)[\s\S])*)\n\n/;
+  },
+
+  // # 标题
+  get head() {
+    return /^\s*(#{1,6})([^\n]*)\n?/;
+  },
+
+  // `行内code`
+  get inlineCode() {
+    return /^`([^`]*)`/;
+  },
+
+  get br() {
+    return /^\n/;
+  },
+
+  get text() {
+    return /^[^\n]*\n?/;
+  },
+
+  // --- 分割线
+  get hr() {
+    return /(^-{3,}\n|^-{3,}$)/;
+  },
+
+  // ~~中划线~~
+  get lineThrough() {
+    return /^~{2}(((?!~{2}).)*)~{2}/;
+  },
+
+  // *倾斜*
+  get italic() {
+    return /^\*(((?!\*).)*)\*/;
+  },
+
+  // **加粗**
+  get blod() {
+    // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
+    return /^\*{2}(((?!\*{2}).)*)\*{2}/;
+  },
+
+  // !!![视频](url)
+  get video() {
+    return /^!{3}\[([^\]]*)\]\(([^)]+)\)/;
+  },
+
+  // !![音频](url)
+  get audio() {
+    return /^!{2}\[([^\]]*)\]\(([^)]+)\)/;
+  },
+
+  // ![图片](url)
+  get img() {
+    return /^!\[([^\]]*)\]\(([^)]+)\)/;
+  },
+
+  // [连接描述](url地址)
+  get url() {
+    return /^\[([^\]]+)\]\(([^)]+)\)/;
+  }
+
+};
+
 function getNextLine(ss) {
   var index = ss.indexOf('\n');
 
@@ -335,6 +435,8 @@ function treeShake() {
   var lineStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
   return lineStr.split('|').filter(function (i, index, arr) {
     return index === 0 || index === arr.length - 1 ? i.trim() : i;
+  }).map(function (i) {
+    return i.replace(/\s+$/g, '');
   });
 }
 
@@ -446,7 +548,7 @@ function sortUl(ul) {
     item.ident = ident;
     item.ul = {
       // li可能会嵌套列表
-      type: 'ul',
+      type: nodeType.ul,
       children: []
     };
     var parent = findParent(ident);
@@ -472,7 +574,7 @@ function parseUL() {
   var index = 0;
   var line = '';
   var ul = {
-    type: 'ul',
+    type: nodeType.ul,
     children: []
   };
 
@@ -500,15 +602,15 @@ function parseUL() {
           todoStr = _matchResult[3];
 
       var child = line.slice(prevStr.length);
-      var todoType = '';
+      var todoType = nodeType.li;
 
       if (todoStr) {
-        todoType = todoStr.indexOf('x') > -1 ? 'done' : 'todo';
+        todoType = todoStr.indexOf('x') > -1 ? nodeType.li_done : nodeType.li_todo;
       } // 判断类型是不是todo
 
 
       ul.children.push({
-        type: todoType ? "li-".concat(todoType) : 'li',
+        type: todoType,
         char: char,
         raw: line,
         children: [child]
@@ -572,74 +674,8 @@ function parseQuote(str, callback) {
  */
 
 /** @typedef {import("./../@type/index").AST} AST */
+// 向node节点上添加元数据
 
-
-var Reg = {
-  // > 引用
-  get queto() {
-    return /^>(((?!\n\n)[\s\S])*)\n\n/;
-  },
-
-  // # 标题
-  get head() {
-    return /^\s*(#{1,6})([^\n]*)\n?/;
-  },
-
-  // `行内code`
-  get inlineCode() {
-    return /^`([^`]*)`/;
-  },
-
-  get br() {
-    return /^\n/;
-  },
-
-  get text() {
-    return /^[^\n]*\n?/;
-  },
-
-  // --- 分割线
-  get hr() {
-    return /(^-{3,}\n)/;
-  },
-
-  // ~~中划线~~
-  get lineThrough() {
-    return /^~{2}(((?!~{2}).)*)~{2}/;
-  },
-
-  // *倾斜*
-  get italic() {
-    return /^\*(((?!\*).)*)\*/;
-  },
-
-  // **加粗**
-  get blod() {
-    // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
-    return /^\*{2}(((?!\*{2}).)*)\*{2}/;
-  },
-
-  // !!![视频](url)
-  get video() {
-    return /^!{3}\[([^\]]*)\]\(([^)]+)\)/;
-  },
-
-  // !![音频](url)
-  get audio() {
-    return /^!{2}\[([^\]]*)\]\(([^)]+)\)/;
-  },
-
-  // ![图片](url)
-  get img() {
-    return /^!\[([^\]]*)\]\(([^)]+)\)/;
-  },
-
-  // [连接描述](url地址)
-  get url() {
-    return /^\[([^\]]+)\]\(([^)]+)\)/;
-  }
-
-};
 /**
  * [parser 获取AST]
  * @method parser
@@ -647,13 +683,26 @@ var Reg = {
  * @return {AST}          [ast tree]
  */
 
+
 function parser() {
   var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
   var defaultNode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-  var node = defaultNode || {
+  var IX = 0;
+
+  function addRaw(node) {
+    var text = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    node.raw = {
+      text: text,
+      start: IX,
+      end: IX + text.length
+    };
+    return node;
+  }
+
+  var node = defaultNode || addRaw({
     children: [],
-    type: 'root'
-  };
+    type: nodeType.root
+  }, str);
   /**
    * 更改切换上下文，方便快速添加children
    * @method changeCurrentNode
@@ -676,6 +725,7 @@ function parser() {
   function slice() {
     var all = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     str = str.slice(all.length);
+    IX += all.length;
   }
   /**
    * [handleText 处理文本]
@@ -694,12 +744,12 @@ function parser() {
 
     if (Reg.url.test(textStr)) {
       handleText(textStr.replace(Reg.url, function (m, $text, $href) {
-        var child = {
-          type: 'a',
+        var child = addRaw({
+          type: nodeType.url,
           href: $href,
-          value: $text,
+          alt: $text,
           children: []
-        };
+        }, m);
         changeCurrentNode(child, function () {
           handleText($text);
         });
@@ -711,10 +761,10 @@ function parser() {
 
     if (Reg.blod.test(textStr)) {
       handleText(textStr.replace(Reg.blod, function (m, $0) {
-        var child = {
-          type: 'b',
+        var child = addRaw({
+          type: nodeType.blod,
           children: []
-        };
+        }, m);
         changeCurrentNode(child, function () {
           handleText($0);
         });
@@ -726,10 +776,10 @@ function parser() {
 
     if (Reg.lineThrough.test(textStr)) {
       handleText(textStr.replace(Reg.lineThrough, function (m, $0) {
-        var child = {
-          type: 'lineThrough',
+        var child = addRaw({
+          type: nodeType.linethrough,
           children: []
-        };
+        }, m);
         changeCurrentNode(child, function () {
           handleText($0);
         });
@@ -741,10 +791,10 @@ function parser() {
 
     if (Reg.italic.test(textStr)) {
       handleText(textStr.replace(Reg.italic, function (m, $0) {
-        var child = {
-          type: 'i',
+        var child = addRaw({
+          type: nodeType.italic,
           children: []
-        };
+        }, m);
         changeCurrentNode(child, function () {
           handleText($0);
         });
@@ -757,10 +807,10 @@ function parser() {
     if (Reg.inlineCode.test(textStr)) {
       handleText(textStr.replace(Reg.inlineCode, function (m, $0) {
         if ($0) {
-          var child = {
-            type: 'inlineCode',
+          var child = addRaw({
+            type: nodeType.inlineCode,
             children: []
-          };
+          }, m);
           changeCurrentNode(child, function () {
             handleText($0);
           });
@@ -774,11 +824,11 @@ function parser() {
 
     if (Reg.video.test(textStr)) {
       handleText(textStr.replace(Reg.video, function (m, $alt, $src) {
-        changeCurrentNode({
-          type: 'video',
+        changeCurrentNode(addRaw({
+          type: nodeType.video,
           src: $src,
           alt: $alt
-        });
+        }, m));
         return '';
       }));
       return;
@@ -787,11 +837,11 @@ function parser() {
 
     if (Reg.audio.test(textStr)) {
       textStr = textStr.replace(Reg.audio, function (m, $alt, $src) {
-        changeCurrentNode({
-          type: 'audio',
+        changeCurrentNode(addRaw({
+          type: nodeType.audio,
           src: $src,
           alt: $alt
-        });
+        }, m));
         return '';
       });
       handleText(textStr);
@@ -801,11 +851,11 @@ function parser() {
 
     if (Reg.img.test(textStr)) {
       handleText(textStr.replace(Reg.img, function (m, $alt, $src) {
-        changeCurrentNode({
-          type: 'img',
+        changeCurrentNode(addRaw({
+          type: nodeType.img,
           src: $src,
           alt: $alt
-        });
+        }, m));
         return '';
       }));
       return;
@@ -813,9 +863,9 @@ function parser() {
 
 
     if (textStr[0] == '\n') {
-      changeCurrentNode({
-        type: 'br'
-      });
+      changeCurrentNode(addRaw({
+        type: nodeType.br
+      }, textStr[0]));
       handleText(textStr.slice(1));
       return;
     } // 文本,如果前一个元素是文本元素，就追加上去，反则新增文本元素
@@ -823,13 +873,13 @@ function parser() {
 
     var lastChild = node.children[node.children.length - 1];
 
-    if (lastChild && lastChild.type === 'text') {
+    if (lastChild && lastChild.type === nodeType.text) {
       lastChild.value += textStr[0];
     } else {
-      changeCurrentNode({
-        type: 'text',
+      changeCurrentNode(addRaw({
+        type: nodeType.text,
         value: handleTranslationCode(textStr[0])
-      });
+      }, ''));
     }
 
     handleText(textStr.slice(1));
@@ -857,9 +907,9 @@ function parser() {
           _str$match2 = _slicedToArray(_str$match, 1),
           all = _str$match2[0];
 
-      changeCurrentNode({
-        type: 'br'
-      });
+      changeCurrentNode(addRaw({
+        type: nodeType.br
+      }, all));
       slice(all);
       next();
       return;
@@ -873,25 +923,44 @@ function parser() {
           head = _ref4[1],
           content = _ref4[2];
 
-      var child = {
-        type: "h".concat(head.length),
+      var child = addRaw({
+        type: nodeType["h".concat(head.length)],
+        id: content,
         children: []
-      };
+      }, _all);
       changeCurrentNode(child, function () {
         handleText(content);
       });
       slice(_all);
       next();
       return;
+    } // hr
+
+
+    if (Reg.hr.test(str)) {
+      var _ref5 = str.match(Reg.hr) || [],
+          _ref6 = _slicedToArray(_ref5, 1),
+          _all2 = _ref6[0];
+
+      if (_all2 !== undefined) {
+        changeCurrentNode(addRaw({
+          type: nodeType.hr,
+          children: []
+        }, _all2));
+      }
+
+      slice(_all2);
+      next();
+      return;
     }
 
-    if (parseQuote(str, function (_ref5) {
-      var raw = _ref5.raw,
-          content = _ref5.content;
-      var h = {
-        type: 'queto',
+    if (parseQuote(str, function (_ref7) {
+      var raw = _ref7.raw,
+          content = _ref7.content;
+      var h = addRaw({
+        type: nodeType.queto,
         children: []
-      };
+      }, raw);
       changeCurrentNode(h);
       h.children = parser(content, h).children;
       slice(raw);
@@ -901,24 +970,24 @@ function parser() {
     } // code
 
 
-    if (parseBlockCode(str, function (_ref6) {
-      var language = _ref6.language,
-          content = _ref6.content,
-          raw = _ref6.raw;
-      changeCurrentNode({
-        type: 'code',
+    if (parseBlockCode(str, function (_ref8) {
+      var language = _ref8.language,
+          content = _ref8.content,
+          raw = _ref8.raw;
+      changeCurrentNode(addRaw({
+        type: nodeType.code,
         language: language,
         value: content
-      });
+      }, raw));
       slice(raw);
     })) {
       next();
       return;
     }
 
-    if (parseUL(str, function (_ref7) {
-      var raw = _ref7.raw,
-          list = _ref7.list;
+    if (parseUL(str, function (_ref9) {
+      var raw = _ref9.raw,
+          list = _ref9.list;
       var LIST_STYLES = ['disc', // 实心圆
       'circle', // 空心圆
       'square'];
@@ -928,7 +997,7 @@ function parser() {
         var children = ul.children,
             deep = ul.deep;
         var child = {
-          type: 'ul',
+          type: nodeType.ul,
           listStyleType: children[0].char === '+' ? DECIMAL : LIST_STYLES[deep % LIST_STYLES.length],
           children: []
         };
@@ -956,43 +1025,43 @@ function parser() {
 
 
     if (parseTable(str, function (result) {
-      changeCurrentNode({
-        type: 'table',
+      changeCurrentNode(addRaw({
+        type: nodeType.table,
         children: []
-      }, function () {
+      }, result.raw), function () {
         // table头
-        changeCurrentNode({
-          type: 'thead',
+        changeCurrentNode(addRaw({
+          type: nodeType.thead,
           children: []
-        }, function () {
-          changeCurrentNode({
-            type: 'tr',
+        }), function () {
+          changeCurrentNode(addRaw({
+            type: nodeType.tr,
             children: []
-          }, function () {
+          }), function () {
             result.table.head.forEach(function (item) {
-              changeCurrentNode({
-                type: 'th',
+              changeCurrentNode(addRaw({
+                type: nodeType.th,
                 children: []
-              }, function () {
+              }, item), function () {
                 handleText(item);
               });
             });
           });
         });
-        changeCurrentNode({
-          type: 'tbody',
+        changeCurrentNode(addRaw({
+          type: nodeType.tbody,
           children: []
-        }, function () {
+        }), function () {
           result.table.body.forEach(function (item) {
-            changeCurrentNode({
-              type: 'tr',
+            changeCurrentNode(addRaw({
+              type: nodeType.tr,
               children: []
-            }, function () {
+            }), function () {
               item.forEach(function (item) {
-                changeCurrentNode({
-                  type: 'td',
+                changeCurrentNode(addRaw({
+                  type: nodeType.td,
                   children: []
-                }, function () {
+                }, item), function () {
                   handleText(item);
                 });
               });
@@ -1000,29 +1069,11 @@ function parser() {
           });
         });
       });
-      changeCurrentNode({
-        type: 'br'
-      });
+      changeCurrentNode(addRaw({
+        type: nodeType.br
+      }, '\n\n'));
       slice(result.raw);
     })) {
-      next();
-      return;
-    } // hr
-
-
-    if (Reg.hr.test(str)) {
-      var _ref8 = str.match(Reg.hr) || [],
-          _ref9 = _slicedToArray(_ref8, 1),
-          _all2 = _ref9[0];
-
-      if (_all2 !== undefined) {
-        changeCurrentNode({
-          type: 'hr',
-          children: []
-        });
-      }
-
-      slice(_all2);
       next();
       return;
     } // 单行text
@@ -1194,6 +1245,35 @@ function patch() {
         }
     }
   });
+} // 获取节点上的所有文本信息
+
+/**
+ * 遍历节点获取Node内的图片、文本信息
+ * @param  {Node} node [markdown AST]
+ */
+
+
+function getParserNodeInfo(node) {
+  var text = '';
+  var imgs = [];
+
+  function next(mNode) {
+    if (mNode.type == 'text') {
+      text += mNode.value || '';
+    }
+
+    if (mNode.type == 'img') {
+      imgs.push(mNode.src);
+    }
+
+    mNode.children && mNode.children.forEach(next);
+  }
+
+  next(node);
+  return {
+    text: text,
+    imgs: imgs
+  };
 }
 /**
  * AST转HTMLNode
@@ -1225,8 +1305,8 @@ function trans(node, $parent) {
   };
 
   switch (node.type) {
-    case 'audio':
-    case 'video':
+    case nodeType.audio:
+    case nodeType.video:
       {
         // 处理iframe
         // 我们允许添加iframe，但是限制iframe的大小
@@ -1247,7 +1327,7 @@ function trans(node, $parent) {
         break;
       }
 
-    case 'img':
+    case nodeType.img:
       {
         var result = node.src.match(/\.(\d+)x(\d+)\./);
 
@@ -1272,20 +1352,7 @@ function trans(node, $parent) {
         }
       }
 
-    case 'text':
-      {
-        var text = node.value;
-        ele = document.createTextNode(text);
-        break;
-      }
-
-    case 'br':
-      {
-        ele = document.createElement(node.type);
-        break;
-      }
-
-    case 'a':
+    case nodeType.url:
       {
         ele = document.createElement(node.type);
         ele.href = node.href;
@@ -1293,7 +1360,20 @@ function trans(node, $parent) {
         break;
       }
 
-    case 'code':
+    case nodeType.text:
+      {
+        var text = node.value;
+        ele = document.createTextNode(text);
+        break;
+      }
+
+    case nodeType.br:
+      {
+        ele = document.createElement(node.type);
+        break;
+      }
+
+    case nodeType.code:
       {
         ele = document.createElement('pre');
         var code = document.createElement('code'); // 需要在node上添加__update方法，方便更新属性
@@ -1326,16 +1406,16 @@ function trans(node, $parent) {
         break;
       }
 
-    case 'inlineCode':
+    case nodeType.inlineCode:
       {
         ele = document.createElement('code');
         ele.className = 'inlineCode';
         break;
       }
 
-    case 'h1':
+    case nodeType.head:
       {
-        ele = document.createElement(node.type); // 添加一个
+        ele = document.createElement("h".concat(node.level)); // 添加一个
         // const a = document.createElement('a')
         // const id = getText(node)
         // a.href = `#${id}`
@@ -1345,7 +1425,7 @@ function trans(node, $parent) {
         break;
       }
 
-    case 'ul':
+    case nodeType.ul:
       {
         ele = document.createElement(node.type);
 
@@ -1384,12 +1464,29 @@ function trans(node, $parent) {
         break;
       }
 
+    case nodeType.h3:
+    case nodeType.h2:
+    case nodeType.h1:
+      {
+        ele = document.createElement(node.type); // 为标题添加id，以支持锚点
+
+        node.__update = function (key, newNode) {
+          if (key === 'id') {
+            ele.id = getParserNodeInfo(newNode).text.trim();
+          }
+        };
+
+        node.__update('id', node);
+
+        break;
+      }
+
     default:
       {
         ele = document.createElement(node.type);
         node.indent && (ele.style.cssText += ';padding-left: 2em;'); // table表格需要设置边框
 
-        if (node.type == 'table') {
+        if (node.type == nodeType.table) {
           ele.setAttribute('border', '1');
         }
       }
@@ -1407,34 +1504,6 @@ function trans(node, $parent) {
   }
 
   return ele;
-}
-/**
- * 遍历节点获取Node内的图片、文本信息
- * @param  {Node} node [markdown AST]
- */
-
-
-function getParserNodeInfo(node) {
-  var text = '';
-  var imgs = [];
-
-  function next(mNode) {
-    if (mNode.type == 'text') {
-      text += mNode.value || '';
-    }
-
-    if (mNode.type == 'img') {
-      imgs.push(mNode.src);
-    }
-
-    mNode.children && mNode.children.forEach(next);
-  }
-
-  next(node);
-  return {
-    text: text,
-    imgs: imgs
-  };
 }
 
 var cache = {}; // 获取解析结果
