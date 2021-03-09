@@ -55,6 +55,13 @@ function treeShake(lineStr = '') {
         });
 }
 
+/**
+ * 解析table
+ * @export
+ * @param {string} [str='']
+ * @param {function} callback
+ * @returns
+ */
 export function parseTable(str = '', callback) {
     const strCache = str;
     const table = {

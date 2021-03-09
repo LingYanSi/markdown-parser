@@ -13,6 +13,10 @@
         body {
             font-size: 12px;
         }
+        textarea {
+            font-family: Inconsolata;
+        }
+
         textarea, #render {
             display: block;
             box-sizing: border-box;
@@ -84,7 +88,7 @@
         import { markdown, Markdown, getParseResult } from '../src/index.js'
         import { diffNode } from '../src/diff.js'
 
-        import formater from '../src/formater.js'
+        import formater from '../src/formater/index.js'
         import Hotkey from './hotkeys/index.js'
 
         window.getParseResult = getParseResult
