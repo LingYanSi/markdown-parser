@@ -10,6 +10,7 @@ export interface ASTNode {
     src?: String,
     alt?: String,
     language?: String,
+    listStyleType?: String,
     raw: {
         start: Number,
         end: Number,
