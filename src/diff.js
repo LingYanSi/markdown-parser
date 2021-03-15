@@ -18,15 +18,10 @@
 // 为node添加id
 /** @typedef {import("./../@type/index").AST} AST */
 
-const NO_NEED_DIFF = [
-    '$getNode',
-    '__node',
-    '__parent',
-    '__update',
-    'children',
-    'type',
-    'raw',
-];
+function checkIsNoNeedDiff(key = '') {
+    // __ 开头的未内部私有属性
+    return key.startsWith('__') || ['children', '$getNode', 'type', 'raw'].includes(key)
+}
 
 /**
  * diff对象差异
@@ -42,7 +37,7 @@ export function diffObject(prevNode = {}, nextNode = {}) {
     const change = []; // 删除
     prevKeys.forEach((key) => {
         // 不需要参与diff的key
-        if (NO_NEED_DIFF.includes(key)) {
+        if (checkIsNoNeedDiff(key)) {
             return;
         }
 
