@@ -48,12 +48,17 @@ function identSpace() {
     return ' '.repeat(ident * 5);
 }
 
-function fmtList(/** @type {ASTNode} */ pnode) {
+/**
+ * 格式化列表
+ * @param {ASTNode} pnode
+ * @returns
+ */
+function fmtList(pnode) {
     ident += 1;
     const LIST_STYLE_CHAR = pnode.listStyleType === 'decimal' ? '+' : '-';
 
     // 需要有堆栈的概念，去处理缩进问题
-    const result = pnode.children
+    let result = pnode.children
         .map((item) => {
             const { type } = item;
             switch (type) {
@@ -85,6 +90,9 @@ function fmtList(/** @type {ASTNode} */ pnode) {
         })
         .join('');
     ident -= 1;
+    if (pnode.__root) {
+        result += `\n`;
+    }
     return result;
 }
 
@@ -105,12 +113,28 @@ function format(pnode) {
                 }
                 case nodeType.ul:
                     return fmtList(node);
-                case nodeType.queto:
+                case nodeType.h1:
+                case nodeType.h2:
+                case nodeType.h3:
+                case nodeType.h4:
+                case nodeType.h5:
+                case nodeType.h6:
+                    return fmtHead(node);
                 default:
                     return node.raw.text;
             }
         })
         .join('');
+}
+
+/**
+ * 格式化标题
+ * @param {ASTNode} pnode
+ */
+function fmtHead(pnode) {
+    if (/^h[1-9]$/.test(pnode.type)) {
+        return `#` + ' '.repeat(pnode.__headLen) + format(pnode).trimLeft()
+    }
 }
 
 // 把AST转换成纯文本，进行格式化操作

@@ -301,6 +301,7 @@ export function parser(str = '', defaultNode = null) {
             const child = addRaw(
                 {
                     type: nodeType[`h${head.length}`],
+                    __headLen: head.length,
                     id: content,
                     children: [],
                 },
@@ -406,9 +407,12 @@ export function parser(str = '', defaultNode = null) {
                             );
                         });
                     });
+
+                    return child;
                 };
 
-                handleList(list);
+                const rootUL = handleList(list);
+                rootUL.__root = true; // 根部ul，用以区分嵌套的ul
 
                 slice(raw);
             })
