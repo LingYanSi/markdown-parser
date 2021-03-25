@@ -133,7 +133,7 @@ function format(pnode) {
  */
 function fmtHead(pnode) {
     if (/^h[1-9]$/.test(pnode.type)) {
-        return `#` + ' '.repeat(pnode.__headLen) + format(pnode).trimLeft()
+        return `#` + ' '.repeat(pnode.__headLen) + format(pnode).trimLeft() + '\n'
     }
 }
 
