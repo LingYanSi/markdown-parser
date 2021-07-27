@@ -64,10 +64,6 @@ function treeShake(lineStr = '') {
  */
 export function parseTable(str = '', callback) {
     const strCache = str;
-    const table = {
-        head: [],
-        body: [],
-    };
 
     let head = '';
     let splitLine = '';
@@ -81,7 +77,10 @@ export function parseTable(str = '', callback) {
     splitLine = treeShake(splitLine);
 
     if (splitLine.length >= 2 && head.length) {
-        table.head = head;
+        const table = {
+            head,
+            body: [],
+        };
         let line = '';
         while (str) {
             [line, str] = getNextLine(str);
@@ -96,6 +95,13 @@ export function parseTable(str = '', callback) {
                 table.body.push(treeShake(line));
             }
         }
+
+        // table的head和body长度对齐，避免table渲染出大片空白，或者最后一列没有值的时候不渲染的问题
+        const tableRowLen = Math.max(head.length, ...(table.body.map(i => i.length)))
+        ;[head, ...table.body].forEach(item => {
+            // 借助数组引用类型，修改数组长度
+            item.push(...Array.from({ length: tableRowLen - item.length }).fill(''))
+        })
 
         const result = {
             raw: strCache.slice(0, index),
