@@ -10,7 +10,8 @@
     "build:cjs": "rollup src/index.js --format cjs --file dist/index.js",
     "build:umd": "rollup src/index.js --format iife --name \"lymd\" --file dist/lymd.min.js",
     "min": "babel dist --out-dir dist; minify dist/index.umd.js -d dist",
-    "build": "yarn lint; npm run build:cjs; npm run build:umd; npm run min"
+    "build": "yarn lint; npm run build:cjs; npm run build:umd; npm run min",
+    "prepublish": "yarn build"
   },
   "repository": {
     "type": "git",

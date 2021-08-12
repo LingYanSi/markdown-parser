@@ -20,7 +20,10 @@
 
 function checkIsNoNeedDiff(key = '') {
     // __ 开头的未内部私有属性
-    return key.startsWith('__') || ['children', '$getNode', 'type', 'raw'].includes(key)
+    return (
+        key.startsWith('__') ||
+        ['children', '$getNode', 'type', 'raw'].includes(key)
+    );
 }
 
 /**

@@ -88,4 +88,9 @@ export const Reg = {
     get url() {
         return /^\[([^\]]+)\]\(([^)]+)\)/;
     },
+
+    // 获取简单的url <https://xxx.ccc>
+    get simpleUrl() {
+        return /^<(https?:\/{2}[^<]+)>/;
+    },
 };

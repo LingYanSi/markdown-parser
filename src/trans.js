@@ -145,13 +145,13 @@ export default function trans(node, $parent, option = {}) {
         /**
          * node.getRoot = () => [返回真实的根节点]，可以是一个数组
          */
-        case 'li-done':
-        case 'li-todo': {
+        case nodeType.li_done:
+        case nodeType.li_todo: {
             realRoot = document.createElement('li');
 
             const tag = document.createElement('span');
             tag.className = 'list-todo-tag';
-            tag.textContent = node.type === 'li-done' ? '✅' : '🚧';
+            tag.textContent = node.type === nodeType.li_done ? '✅' : '🚧';
             realRoot.appendChild(tag);
 
             ele = document.createElement('span');

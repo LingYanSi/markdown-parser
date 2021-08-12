@@ -103,6 +103,28 @@ export function parser(str = '', defaultNode = null) {
             return;
         }
 
+        // 简单链接
+        if (Reg.simpleUrl.test(textStr)) {
+            handleText(
+                textStr.replace(Reg.simpleUrl, (m, $href) => {
+                    const child = addRaw(
+                        {
+                            type: nodeType.url,
+                            href: $href,
+                            alt: $href,
+                            children: [],
+                        },
+                        m
+                    );
+                    changeCurrentNode(child, () => {
+                        handleText($href);
+                    });
+                    return '';
+                })
+            );
+            return;
+        }
+
         // 加粗
         if (Reg.blod.test(textStr)) {
             handleText(
