@@ -45,6 +45,16 @@ export const Reg = {
     get head() {
         return /^\s*(#{1,6})([^\n]*)\n?/;
     },
+    getHead(str = '') {
+        const [all, space, head, content] = str.match(/^(\s*)(#{1,6})([^\n]*)\n?/)
+        return {
+            all,
+            space,
+            head,
+            content,
+            contentPos: (space + head).length,
+        }
+    },
     // `行内code`
     get inlineCode() {
         return /^`([^`]*)`/;

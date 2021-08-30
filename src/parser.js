@@ -17,6 +17,12 @@ import nodeType, { Reg } from './nodeType.js';
  * 如果不以 #{1,6} - > ``` 开头表明就是字符串
  * 简单的东西，当然可以正则搞定
  * 但目前来看markdown还是需要做一点语法分析的
+ *
+ * 记录节点在原始文档中的信息，或者仅需记载节点在父节点的位置信息
+ * 到底是什么产生了偏移，是标识符，因此我们需要记录的是有效内容的位置与标识符的位置，然后就可以记录出相对坐标了
+ *
+ * 可以通过offset，而不用真实slice，然后记录
+ * 如果基于匹配中的内容，继续向下递归
  */
 
 /** @typedef {import("./../@type/index").AST} AST */
@@ -29,14 +35,15 @@ import nodeType, { Reg } from './nodeType.js';
  * @param  {String} [str=''] [description]
  * @return {AST}          [ast tree]
  */
-export function parser(str = '', defaultNode = null) {
-    let IX = 0;
+export function parser(str = '', { defaultNode = null, rawStartIndex = 0 } = {}) {
+    let rawIndex = rawStartIndex;
     function addRaw(node, text = '') {
         node.raw = {
             text,
-            start: IX,
-            end: IX + text.length,
+            start: rawIndex,
+            end: rawIndex + text.length,
         };
+        rawIndex += text.length
         return node;
     }
 
@@ -46,6 +53,9 @@ export function parser(str = '', defaultNode = null) {
             {
                 children: [],
                 type: nodeType.root,
+                raw: {
+                    startX: 0,
+                }
             },
             str
         );
@@ -58,6 +68,7 @@ export function parser(str = '', defaultNode = null) {
      */
     function changeCurrentNode(child, callback, options = {}) {
         const { isPush = true } = options;
+        // TODO: 需要把index也切换一下
         child.__parent = node;
         node = child;
         callback && callback();
@@ -68,7 +79,7 @@ export function parser(str = '', defaultNode = null) {
 
     function slice(all = '') {
         str = str.slice(all.length);
-        IX += all.length;
+        rawIndex += all.length;
     }
 
     /**
@@ -271,10 +282,12 @@ export function parser(str = '', defaultNode = null) {
             return;
         }
 
+        // 可以换一种逻辑，直到遇到非文本节点，才先添加文本节点
         // 文本,如果前一个元素是文本元素，就追加上去，反则新增文本元素
         const lastChild = node.children[node.children.length - 1];
         if (lastChild && lastChild.type === nodeType.text) {
             lastChild.value += textStr[0];
+            lastChild.raw.end += 1;
         } else {
             changeCurrentNode(
                 addRaw(
@@ -282,7 +295,7 @@ export function parser(str = '', defaultNode = null) {
                         type: nodeType.text,
                         value: handleTranslationCode(textStr[0]),
                     },
-                    ''
+                    textStr[0]
                 )
             );
         }
@@ -319,7 +332,7 @@ export function parser(str = '', defaultNode = null) {
 
         // 标题
         if (Reg.head.test(str)) {
-            const [all, head, content] = str.match(Reg.head) || [];
+            const { all, head, content, contentPos } = Reg.getHead(str);
             const child = addRaw(
                 {
                     type: nodeType[`h${head.length}`],
@@ -330,7 +343,7 @@ export function parser(str = '', defaultNode = null) {
                 all
             );
             changeCurrentNode(child, () => {
-                handleText(content);
+                handleText(content, { start: contentPos });
             });
             slice(all);
             next();
@@ -357,7 +370,8 @@ export function parser(str = '', defaultNode = null) {
         }
 
         if (
-            parseQuote(str, ({ raw, content }) => {
+            parseQuote(str, ({ raw, content, contentPos }) => {
+                const nextParseStartIndex = rawIndex + contentPos
                 const h = addRaw(
                     {
                         type: nodeType.queto,
@@ -366,7 +380,7 @@ export function parser(str = '', defaultNode = null) {
                     raw
                 );
                 changeCurrentNode(h);
-                h.children = parser(content, h).children;
+                h.children = parser(content, { defaultNode: h, rawStartIndex: nextParseStartIndex }).children;
                 slice(raw);
             })
         ) {
@@ -406,19 +420,19 @@ export function parser(str = '', defaultNode = null) {
                 const handleList = (ul) => {
                     const { children, deep } = ul;
 
-                    const child = {
+                    const child = addRaw({
                         type: nodeType.ul,
                         listStyleType:
                             children[0].char === '+'
                                 ? DECIMAL
                                 : LIST_STYLES[deep % LIST_STYLES.length],
                         children: [],
-                    };
+                    }, raw);
 
                     changeCurrentNode(child, () => {
                         children.forEach((item) => {
                             changeCurrentNode(
-                                { type: item.type, children: [] },
+                                addRaw({ type: item.type, children: [] }, item.raw),
                                 () => {
                                     item.children.forEach((line) => {
                                         handleText(line);

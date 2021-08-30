@@ -62,7 +62,7 @@ function treeShake(lineStr = '') {
  * @param {function} callback
  * @returns
  */
-export function parseTable(str = '', callback) {
+export function parseTable(str = '', pos = 0, callback) {
     const strCache = str;
 
     let head = '';
@@ -177,20 +177,22 @@ function sortUl(ul) {
     return newUl;
 }
 
-export function parseUL(str = '', callback) {
-    const strCache = str;
-
+export function parseUL(str = '', pos = 0, callback) {
     // 如果遇到了空行则结束，否则都按照
     if (!listReg.test(str)) return;
 
     let index = 0;
+    let prevIndex = pos;
     let line = '';
     const ul = {
         type: nodeType.ul,
+        start: pos,
         children: [],
     };
+
     while (str) {
         [line, str] = getNextLine(str);
+        prevIndex = index + pos;
         index += line.length;
 
         // 遇到空行则跳出
@@ -216,17 +218,25 @@ export function parseUL(str = '', callback) {
             ul.children.push({
                 type: todoType,
                 char,
-                raw: line,
+                raw: {
+                    start: prevIndex,
+                    end: index + pos,
+                },
                 children: [child],
             });
         } else {
             ul.children[ul.children.length - 1].children.push(line);
+            ul.children[ul.children.length - 1].raw.end = index + pos
         }
     }
 
     const result = {
-        raw: strCache.slice(0, index),
+        end: pos + index,
         list: sortUl(ul),
+        raw: {
+            start: pos,
+            end: index,
+        }
     };
 
     callback(result);
@@ -255,6 +265,7 @@ export function parseQuote(str, callback) {
     const result = {
         raw: strCache.slice(0, index),
         content: strCache.slice(1, index),
+        contentPos: 1,
     };
 
     callback(result);
