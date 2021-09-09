@@ -1,3 +1,5 @@
+
+import nodeType, { TOKEN_TYPE as TKS } from './nodeType.js'
 // @ts-check
 // TODO:
 // 递归迭代
@@ -74,40 +76,48 @@ class Token {
     }
 }
 
-const TKS = {
-    NO_ORDER_LIST: 'no_order_list',
-    ORDER_LIST: 'order_list',
-    SIMPLE_URL_START: 'simple_url_start',
-    SIMPLE_URL_END: 'simple_url_end',
-    URL_START: 'url_start',
-    URL_END: 'url_end',
-    URL_DESC_START: 'url_desc_start',
-    URL_DESC_END: 'url_desc_end',
-    HEAD_TITLE: 'head_title',
-    IMG_START: 'img_start',
-    TABLE_SPLIT: 'table_split',
-    CODE_BLOCK: 'code_block',
-    WHITE_SPACE: 'white_space',
-    LINE_END: 'line_end',
-    STRING: 'string',
-}
 
-const NODE_TYPE = {
-    HEAD: 'head',
-    TEXT: 'text',
-    NEW_LINE: 'br',
-    IMAGE: 'img',
-    LINK: 'link',
-    CODE: 'code',
-    INLINE_CODE: 'inline_code',
-    QUOTE: 'quote',
-}
+/**
+ * type: String,
+    children: ASTNode[],
+    value?: String,
+    src?: String,
+    alt?: String,
+    language?: String,
+    listStyleType?: String,
+    raw: {
+        start: Number,
+        end: Number,
+        text: String,
+    }
+ * */
 
 class MNode {
     constructor(type, tokens = []) {
         this.type = type
         this.tokens = tokens
         this.children = []
+    }
+}
+
+function astNode(type, tokens = [], properties = {}) {
+    return {
+        type,
+        tokens,
+        children: [],
+        // 方便元素快速访问其父元素
+        push(...args) {
+            args.forEach(i => i.__parent = this)
+            this.children.push(...args)
+        },
+        get value() {
+            if (this.type !== nodeType.text) return ''
+            return this.tokens.map(i => i.raw).join('')
+        },
+        get raw() {
+            return this.children.map(i => i.tokens.map(i => i.raw).join('')).join('') || this.tokens.map(i => i.raw).join('')
+        },
+        ...properties,
     }
 }
 
@@ -165,6 +175,10 @@ function token(input = '') {
             }
             case '`': {
                 tokens.push(new Token(TKS.CODE_BLOCK, char, index, index+1))
+                break
+            }
+            case '~': {
+                tokens.push(new Token(TKS.LINE_THROUGH, char, index, index+1))
                 break
             }
             case ' ': {
@@ -228,13 +242,16 @@ function watchAfter(tokens, offset, length = 1) {
 }
 
 const helper = {
+    // 判断当前token是不是行尾，或者文本结束
     isLineEnd(token) {
         return !token || token.type === TKS.LINE_END
     },
+    // 判断下一个字符是不是行尾
     nextIsLienEnd(tokens, index) {
         const token = tokens[index + 1]
         return token && token.type === TKS.LINE_END
     },
+    // 判断index的前一个字符是不是行首
     isLineStart(tokens, index) {
         const token = tokens[index - 1]
         return !token || token.type === TKS.LINE_END
@@ -242,57 +259,93 @@ const helper = {
     isSomeType(token, type) {
         return token && token.type === type
     },
+    // 继续向后匹配表示
     goOn: {
         matchEnd: false,
     },
+    // 判断是否可以继续向后匹配
     isCanGoOn(r) {
         return this.goOn === r
+    },
+    // tokens转字符串
+    tokensToString(tokens) {
+        return tokens.map(i => i.raw).join('')
+    },
+    getQueueContent(queue = []) {
+        const info = {}
+        queue.forEach(i => {
+            if (i.content) {
+                info[i.name] = i.content
+            }
+        })
+        return info
     }
 }
-
 
 /**
  * 解析行内元素
  * @param {*} index
  * @param {*} tokens
- * @param {*} mnodes
+ * @param {*} parentNode
  * @returns
  */
-function toInlineNode(index, tokens, mnodes) {
+function toInlineNode(index, tokens, parentNode) {
     const token = tokens[index]
-    if (checkIsImg(index, tokens, (matchTokens) => {
-        mnodes.push(new MNode(NODE_TYPE.IMAGE, matchTokens))
+    if (checkIsImg(index, tokens, (matchTokens, info) => {
+        const node = astNode(nodeType.img, matchTokens)
+        node.src = helper.tokensToString(info.src)
+        node.alt = helper.tokensToString(info.alt)
+        parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    if (checkIsUrl(index, tokens, (matchTokens) => {
-        mnodes.push(new MNode(NODE_TYPE.LINK, matchTokens))
+    if (checkIsUrl(index, tokens, (matchTokens, info) => {
+        const node = astNode(nodeType.url, matchTokens, {
+            href: helper.tokensToString(info.src),
+        })
+        node.push(astNode(nodeType.text, info.alt))
+        parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    if (checkIsInlineCode(index, tokens, (matchTokens) => {
-        mnodes.push(new MNode(NODE_TYPE.INLINE_CODE, matchTokens))
+    if (checkIsInlineCode(index, tokens, (matchTokens, info) => {
+        const node = astNode(nodeType.inlineCode, matchTokens)
+        node.push(astNode(nodeType.text, info.code))
+        parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    if (checkIsSimpleUrl(index, tokens, (matchTokens) => {
-        mnodes.push(new MNode(NODE_TYPE.LINK, matchTokens))
+    if (checkIsSimpleUrl(index, tokens, (matchTokens, info) => {
+        const node = astNode(nodeType.url, matchTokens, {
+            href: helper.tokensToString(info.src),
+        })
+        node.push(astNode(nodeType.text, info.src))
+        parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    const lastMnode = mnodes[mnodes.length - 1]
-    if (lastMnode && lastMnode.type === NODE_TYPE.TEXT) {
+    if (checkIsLineThrough(index, tokens, (matchTokens, info) => {
+        const node = astNode(nodeType.linethrough, matchTokens)
+        parseInlineNodeLoop(info.content, node)
+        parentNode.push(node)
+        index += matchTokens.length
+    })) {
+        return index
+    }
+
+    const lastMnode = parentNode[parentNode.length - 1]
+    if (lastMnode && lastMnode.type === nodeType.text) {
         lastMnode.tokens.push(token)
     } else {
-        mnodes.push(new MNode(NODE_TYPE.TEXT, [token]))
+        parentNode.push(astNode(nodeType.text, [token]))
     }
 
     index += 1
@@ -300,17 +353,20 @@ function toInlineNode(index, tokens, mnodes) {
     return index
 }
 
+function parseInlineNodeLoop(tokens, parentNode) {
+    let index = 0
+    while(index < tokens.length) {
+        index = toInlineNode(index, tokens, parentNode)
+    }
+}
+
 /**
  * 如果想递归分析，那就需要把start/end携带上，这样就不用不停的分配新数组了
  * 把token转换为Node
  * @param {Token[]} tokens
  */
-function toNode(tokens) {
-    // 解析规则
-    // IMAGE URL BOLD ITATIC
-    // IMG_START URL_DESC_START WHITE SPACE  URL_DESC_END
-    // URL_START SPACE/ENTER/STRING URL_END
-    const mnodes = []
+function toAST(tokens, defaultRoot) {
+    const root = defaultRoot || astNode(nodeType.root, tokens)
     let index = 0
 
     while (index < tokens.length) {
@@ -318,55 +374,70 @@ function toNode(tokens) {
         // 是不是行首
         // parse head
         if(token.type === TKS.LINE_END) {
-            mnodes.push(new MNode(NODE_TYPE.NEW_LINE, [token]))
+            root.push(astNode(nodeType.br, [token]))
             index += 1
-
             continue
         }
 
         if (checkIsHead(index, tokens, (matchTokens, info) => {
-            mnodes.push(new MNode(NODE_TYPE.HEAD, matchTokens))
-            console.log('headinfo', info)
+            const node = astNode(nodeType['h' + info.headLevel.length], matchTokens)
+            parseInlineNodeLoop(info.children, node)
+            root.push(node)
             index += matchTokens.length
         })) {
             continue
         }
 
-        if (checkIsBlockCode(index, tokens, (matchTokens) => {
-            mnodes.push(new MNode(NODE_TYPE.CODE, matchTokens))
+        if (checkIsBlockCode(index, tokens, (matchTokens, info) => {
+            console.log(info)
+            const node = astNode(nodeType.code, matchTokens, {
+                value: helper.tokensToString(info.code),
+                language: helper.tokensToString(info.language).trim(),
+            })
+            root.push(node)
             index += matchTokens.length
         })) {
             continue
         }
 
-        if (checkIsBlockQuote(index, tokens, (matchTokens) => {
-            mnodes.push(new MNode(NODE_TYPE.QUOTE, matchTokens))
+        if (checkIsBlockQuote(index, tokens, (matchTokens, info) => {
+            const node = astNode(nodeType.queto, matchTokens)
+            toAST(info.children, node)
+            root.push(node)
             index += matchTokens.length
         })) {
             continue
         }
 
-        index = toInlineNode(index, tokens, mnodes)
+        if (checkIsNoOrderList(index, tokens, (matchTokens, info) => {
+            const node = astNode(nodeType.li, matchTokens)
+            parseInlineNodeLoop(info.children, node)
+            root.push(node)
+            index += matchTokens.length
+        })) {
+            continue
+        }
+
+        index = toInlineNode(index, tokens, root)
     }
 
-    return mnodes
+    return root
 }
 
 
-function getQueueContent(queue = []) {
-    const info = {}
-    queue.forEach(i => {
-        if (i.content) {
-            info[i.name] = i.content
-        }
-    })
-    return info
-}
-
-function matchUsefulTokens(index, tokens, queue, handler, matchTokens = []) {
+/**
+ * 匹配
+ * @param {number} index
+ * @param {Array} tokens
+ * @param {Array} queue
+ * @param {Function} handler
+ * @returns {boolean}
+ */
+function matchUsefulTokens(index, tokens, queue, handler) {
+    const matchTokens = []
     let queueTypeIndex = 0
     watchAfterUtil(index, tokens, (item, currentIndex, moveIndex) => {
-        while(true) {
+        while (true) {
             if (typeof queue[queueTypeIndex] === 'object') {
                 const testResult = queue[queueTypeIndex].test(item.type, currentIndex, tokens)
                 if (helper.isCanGoOn(testResult)) {
@@ -407,13 +478,12 @@ function matchUsefulTokens(index, tokens, queue, handler, matchTokens = []) {
 
     // 没有停止解析的
     if (queueTypeIndex === queue.length && queue.every(i => !i.stop)) {
-        handler(matchTokens, getQueueContent(queue))
+        handler(matchTokens, helper.getQueueContent(queue))
         return true
     }
 
     return false
 }
-
 
 function checkIsImg(index, tokens, handler) {
     if (tokens[index].type !== TKS.IMG_START) {
@@ -422,10 +492,9 @@ function checkIsImg(index, tokens, handler) {
 
     const matchTokens = [tokens[index]]
 
-    if (checkIsUrl(index+1, tokens, (urlMatchTokens) => {
-        matchTokens.push(...urlMatchTokens)
+    if (checkIsUrl(index+1, tokens, (urlMatchTokens, info) => {
+        handler(matchTokens.concat(urlMatchTokens), info)
     })) {
-        handler(matchTokens)
         return true
     }
 
@@ -438,18 +507,14 @@ function checkIsUrl(index, tokens, handler) {
         TKS.URL_DESC_START,
         {
             content: [],
-            name: 'url_description',
-            repeatable: true,
-            ignore: true,
+            name: 'alt',
             test: (type) => [TKS.URL_DESC_START, TKS.URL_DESC_END].includes(type) ? { offset: 0 } : helper.goOn,
         },
         TKS.URL_DESC_END,
         TKS.URL_START,
         {
             content: [],
-            name: 'url_address',
-            repeatable: true,
-            ignore: false, // 需要记录重复次数，如果记录一次，才能够继续向下一个进行
+            name: 'src',
             test: (type) => [TKS.URL_START, TKS.URL_END].includes(type) ? { offset: 0 } : helper.goOn,
         },
         TKS.URL_END,
@@ -464,9 +529,7 @@ function checkIsSimpleUrl(index, tokens, handler) {
         TKS.SIMPLE_URL_START,
         {
             content: [],
-            name: 'url_address',
-            repeatable: true,
-            ignore: true,
+            name: 'src',
             test: (type) => {
                 if ([TKS.SIMPLE_URL_START, TKS.SIMPLE_URL_END, TKS.LINE_END, TKS.WHITE_SPACE].includes(type)) {
                     return { offset: 0 }
@@ -494,7 +557,7 @@ function checkIsInlineCode(index, tokens, handler) {
         TKS.CODE_BLOCK,
         {
             content: [],
-            name: 'inline-code',
+            name: 'code',
             repeatable: true,
             ignore: true,
             test: (type) => {
@@ -506,6 +569,37 @@ function checkIsInlineCode(index, tokens, handler) {
                 return helper.goOn
             },
         }
+    ]
+
+    return matchUsefulTokens(index, tokens, queue, handler)
+}
+
+function checkIsLineThrough(index, tokens, handler) {
+    // 不能是连续的``
+    if (
+        tokens[index].type !== TKS.LINE_THROUGH
+    ) {
+        return false
+    }
+
+    const queue = [
+        TKS.LINE_THROUGH,
+        TKS.LINE_THROUGH,
+        {
+            content: [],
+            name: 'content',
+            test(type, index, tokens) {
+                if ([tokens[index + 1], tokens[index + 2]].every(i => i && (i.type == TKS.LINE_THROUGH))) {
+                    this.content.push(tokens[index])
+                    return {
+                        offset: 1,
+                    }
+                }
+                return helper.goOn
+            },
+        },
+        TKS.LINE_THROUGH,
+        TKS.LINE_THROUGH,
     ]
 
     return matchUsefulTokens(index, tokens, queue, handler)
@@ -569,9 +663,22 @@ function checkIsBlockCode(index, tokens, handler) {
         TKS.CODE_BLOCK,
         {
             content: [],
+            name: 'language',
+            test(type, index, tokens) {
+                // 通过向前看，向后看以解析判断，是否命中Node节点
+                if (helper.nextIsLienEnd(tokens, index)) {
+                    this.content.push(tokens[index])
+                    return {
+                        offset: 0
+                    }
+                }
+
+                return helper.goOn
+            },
+        },
+        {
+            content: [],
             name: 'code',
-            repeatable: true,
-            ignore: true,
             test(type, index, tokens) {
                 // 通过向前看，向后看以解析判断，是否命中Node节点
                 if (type === TKS.CODE_BLOCK) {
@@ -605,7 +712,7 @@ function checkIsBlockQuote(index, tokens, handler) {
         TKS.SIMPLE_URL_END,
         {
             content: [],
-            name: 'code',
+            name: 'children',
             repeatable: true,
             ignore: true,
             test(type, index, tokens) {
@@ -626,34 +733,70 @@ function checkIsBlockQuote(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+function checkIsNoOrderList(index, tokens, handler) {
+    if (!helper.isLineStart(tokens, index)) {
+        return false
+    }
+    // 实现一个简单的向前向后看的正则
+    const queue = [
+        TKS.NO_ORDER_LIST,
+        {
+            content: [],
+            name: 'children',
+            test(type, index, tokens) {
+                if (helper.isLineEnd(tokens[index])) {
+                    return {
+                        offset: 0,
+                    }
+                } else if (helper.isLineEnd(tokens[index + 1])) {
+                    // 需要解决立马遇到行尾的问题
+                    this.content.push(tokens[index])
+                    return {
+                        offset: 1,
+                    }
+                }
+
+                return helper.goOn
+            },
+        },
+    ]
+
+    // 需要一个描述符号 \n{0,2}$
+    return matchUsefulTokens(index, tokens, queue, handler)
+}
+
 function time(fn) {
     console.time('性能')
     fn()
     console.timeEnd('性能')
 }
 
-let result
-time(() => {
-result = toNode(token(`
-### sdffffgggggg
-- 111-11111 ![11]( 111)[d
-    sds](dg
-        sfd)
-\`111\`
-\`\`\`
-\`\`
-123344444
-\`\`\`
-<hfffffffff>
-
-> 你好吗
-sddd
-
-很霸道是非得失
+export function parser(str = '') {
+    return toAST(token(str))
+}
 
 
-fffffffff
-`.repeat(1)))
-})
-console.log(result)
+// let result
+// time(() => {
+// result = toAST(token(`
+// ### sdffffgggggg
+// - 111-11111 ![11]( 111)[d
+//     sds](dg
+//         sfd)
+
+// \`111\`
+// \`\`\`
+// \`\`
+// 123344444
+// \`\`\`
+// <hfffffffff>
+
+// > 你好吗
+// ## sddd
+// - 很霸道是非得失
+
+
+// -fffffffff`.repeat(1)))
+// })
+// console.log(result)
 

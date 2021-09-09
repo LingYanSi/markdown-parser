@@ -1,5 +1,5 @@
 import { diffNode } from './diff.js';
-import { parser } from './parser.js';
+import { parser } from './token.n.js';
 import patch from './patch.js';
 import trans from './trans.js';
 import { getParserNodeInfo } from './helper.js';
@@ -84,6 +84,7 @@ class Markdown {
         this.dom.classList.add('markdown');
         const result = getParseResult(str);
         const diffResult = diffNode(this.prevRoot, result.root);
+        console.log(diffResult, this.prevRoot, result.root)
         this.prevRoot = result.root;
         patch(diffResult, this.dom);
 

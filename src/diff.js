@@ -22,7 +22,14 @@ function checkIsNoNeedDiff(key = '') {
     // __ 开头的未内部私有属性
     return (
         key.startsWith('__') ||
-        ['children', '$getNode', 'type', 'raw'].includes(key)
+        [
+            'children',
+            '$getNode',
+            'type',
+            'raw',
+            'tokens', // 原始tokens信息
+            'push', // node节点上的push方法
+        ].includes(key)
     );
 }
 
