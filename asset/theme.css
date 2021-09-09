@@ -72,6 +72,10 @@
     left: -1.4em;
 }
 
+.markdown .highlight {
+    border-radius: 5px;
+}
+
 .markdown table {
     border: 1px solid #eee;
     border-collapse: collapse;
