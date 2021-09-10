@@ -96,21 +96,21 @@ export const Reg = {
 };
 
 export const TOKEN_TYPE = {
-    NO_ORDER_LIST: 'no_order_list',
-    ORDER_LIST: 'order_list',
-    SIMPLE_URL_START: 'simple_url_start',
-    SIMPLE_URL_END: 'simple_url_end',
-    URL_START: 'url_start',
-    URL_END: 'url_end',
+    NO_ORDER_LIST: 'no_order_list', // -
+    ORDER_LIST: 'order_list', // +
+    SIMPLE_URL_START: 'simple_url_start', // <
+    SIMPLE_URL_END: 'simple_url_end', // >
+    URL_START: 'url_start', // [
+    URL_END: 'url_end', // ]
     URL_DESC_START: 'url_desc_start', // (
     URL_DESC_END: 'url_desc_end', // )
     HEAD_TITLE: 'head_title', // #
     IMG_START: 'img_start', // !
     TABLE_SPLIT: 'table_split', // |
     CODE_BLOCK: 'code_block', // `
-    WHITE_SPACE: 'white_space',
-    LINE_END: 'line_end',
-    STRING: 'string',
+    WHITE_SPACE: 'white_space', //
+    LINE_END: 'line_end', // \n
     LINE_THROUGH: 'linethrough', // ~
     BLOB: 'blob', // *
+    STRING: 'string', // 非以上关键字符之外的连续字符
 }

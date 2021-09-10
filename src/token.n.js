@@ -49,6 +49,7 @@ function astNode(type, tokens = [], properties = {}) {
         push(...args) {
             args.forEach(i => i.__parent = this)
             this.children.push(...args)
+            return this
         },
         get value() {
             if (this.type !== nodeType.text) return ''
@@ -162,7 +163,7 @@ function watchAfterUtil(index, tokens, fn) {
     let offset = index
     const moveIndex = (offsetNum) => {
         offset += offsetNum
-        return tokens[offset]
+        return [tokens[offset], offset]
     }
     while (offset < tokens.length) {
         const item = tokens[offset]
@@ -220,9 +221,25 @@ const helper = {
         queue.forEach(i => {
             if (i.content) {
                 info[i.name] = i.content
+                info[i.name + '_raw'] = i
             }
         })
         return info
+    },
+    getIdentMatcher() {
+        return {
+            content: [],
+            name: 'ident',
+            test(type) {
+                if (type !== TKS.WHITE_SPACE) {
+                    return {
+                        offset: 0,
+                    }
+                }
+
+                return helper.goOn
+            },
+        }
     }
 }
 
@@ -351,7 +368,6 @@ function toAST(tokens, defaultRoot) {
         }
 
         if (isBlockCode(index, tokens, (matchTokens, info) => {
-            console.log(info)
             const node = astNode(nodeType.code, matchTokens, {
                 value: helper.tokensToString(info.code),
                 language: helper.tokensToString(info.language).trim(),
@@ -374,6 +390,39 @@ function toAST(tokens, defaultRoot) {
         if (isNoOrderList(index, tokens, (matchTokens, info) => {
             const node = astNode(nodeType.li, matchTokens)
             parseInlineNodeLoop(info.children, node)
+            root.push(node)
+            index += matchTokens.length
+        })) {
+            continue
+        }
+
+        if (isTable(index, tokens, (matchTokens, info) => {
+            const node = astNode(nodeType.table, matchTokens)
+            const thead = astNode(nodeType.thead, info.thead)
+
+            const theadTr = astNode(nodeType.tr, info.thead)
+            thead.push(theadTr)
+            info.thead_raw.children.forEach(item => {
+                const th = astNode(nodeType.th, item)
+                parseInlineNodeLoop(item, th)
+                theadTr.push(th)
+            })
+
+            node.push(thead)
+
+            const tbody = astNode(nodeType.tbody, info.tbody)
+            info.tbody_raw.children.forEach(item => {
+                const tbodyTr = astNode(nodeType.tr, info.tbody)
+                tbody.push(tbodyTr)
+                item.forEach(ele => {
+                    const td = astNode(nodeType.td, item)
+                    parseInlineNodeLoop(ele, td)
+                    tbodyTr.push(td)
+                })
+            })
+
+            node.push(tbody)
+
             root.push(node)
             index += matchTokens.length
         })) {
@@ -408,6 +457,10 @@ function matchUsefulTokens(index, tokens, queue, handler) {
                     return true
                 }
 
+                if (!testResult) {
+                    queue[queueTypeIndex].stop = true
+                }
+
                 // 终止向下解析
                 if (queue[queueTypeIndex].stop) {
                     return false
@@ -415,8 +468,8 @@ function matchUsefulTokens(index, tokens, queue, handler) {
 
                 // 移动index
                 if (testResult.offset > 0) {
-                    matchTokens.push(...tokens.slice(currentIndex, currentIndex + testResult.offset))
-                    item = moveIndex(testResult.offset)
+                    matchTokens.push(...tokens.slice(currentIndex, currentIndex + testResult.offset));
+                    [item, currentIndex] = moveIndex(testResult.offset)
                 }
 
                 // TODO: 当offset大于0的时候需要记录指定的节点比如 结束标签```
@@ -613,6 +666,7 @@ function isHead(index, tokens, handler) {
 
     // 实现一个简单的向前向后看的正则
     const queue = [
+        helper.getIdentMatcher(),
         {
             content: [],
             name: 'headLevel',
@@ -641,7 +695,7 @@ function isHead(index, tokens, handler) {
             test(type, index, tokens) {
                 // 通过向前看，向后看以解析判断，是否命中Node节点
                 if (helper.isLineEnd(tokens[index])) {
-                    return { offset: 0 }
+                    return { offset: 1 } // 忽略尾部\n
                 }
 
                 return helper.goOn
@@ -744,20 +798,132 @@ function isNoOrderList(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
     }
-    // 实现一个简单的向前向后看的正则
+
     const queue = [
+        helper.getIdentMatcher(),
         TKS.NO_ORDER_LIST,
         {
             content: [],
+            children: [], // 二位数组 [[第一行], [第二行]]
             name: 'children',
             test(type, index, tokens) {
-                if (helper.isLineEnd(tokens[index])) {
-                    return {
-                        offset: 0,
-                    }
-                } else if (helper.isLineEnd(tokens[index + 1])) {
+                if (helper.isLineEnd(tokens[index + 1])) {
                     // 需要解决立马遇到行尾的问题
                     this.content.push(tokens[index])
+                    return {
+                        offset: 2, // TODO:忽略结尾token，但其实应当添加到info上
+                    }
+                }
+
+                return helper.goOn
+            },
+        }
+    ]
+
+    // 需要一个描述符号 \n{0,2}$
+    return matchUsefulTokens(index, tokens, queue, handler)
+}
+
+function isTable(index, tokens, handler) {
+    // 如果下一行的内容是  |----|----| 这种格式，则表示是table表格
+    if (!helper.isLineStart(tokens, index)) {
+        return false
+    }
+    // 实现一个简单的向前向后看的正则
+    const queue = [
+        {
+            content: [],
+            children: [],
+            name: 'thead',
+            test(type, index, tokens) {
+                // ----|----|------
+                if (type !== TKS.TABLE_SPLIT) {
+                    if (this.children.length === 0) {
+                        this.children.push([])
+                    }
+                    this.children[this.children.length - 1].push(tokens[index])
+                } else {
+                    this.hasSplit = true // 没有split解析失败
+                    this.children.push([])
+                }
+
+                if (helper.isLineEnd(tokens[index])) {
+                    this.hasSplit && console.log('thead end', index, tokens.slice(index, index + 3))
+                    if (!this.hasSplit) {
+                        this.stop = true
+                    }
+                    this.content.push(tokens[index])
+                    // 如果字符串
+                    return {
+                        offset: 1,
+                    }
+                }
+
+                return helper.goOn
+            },
+        },
+        {
+            content: [],
+            name: 'split',
+            children: [],
+            test(type, index, tokens) {
+                if (![TKS.NO_ORDER_LIST, TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT].includes(type)) {
+                    this.stop = true
+                    return false
+                }
+
+                if (type !== TKS.TABLE_SPLIT) {
+                    if (this.children.length === 0) {
+                        this.children.push([])
+                    }
+                    // 需要时连续的 - ， --之间不能有空格
+                    this.children[this.children.length - 1].push(tokens[index])
+                } else {
+                    this.hasSplit = true // 标识一下是否有split，如果没有的话，解析失败
+                    this.children.push([])
+                }
+
+                // ----|----|------
+                if (helper.isLineEnd(tokens[index])) {
+                    if (!this.hasSplit) {
+                        this.stop = true
+                    }
+
+                    this.content.push(tokens[index])
+                    // 如果字符串
+                    return {
+                        offset: 1,
+                    }
+                }
+
+                return helper.goOn
+            },
+        },
+        {
+            content: [],
+            children: [], // [[[xxx], [yyyyy]], []]
+            name: 'tbody', // 二级嵌套
+            test(type, index, tokens) {
+                if (type === TKS.LINE_END) {
+                    this.children.push([])
+                } else {
+                    if (this.children.length === 0) {
+                        this.children.push([])
+                    }
+                    const lastRow = this.children[this.children.length - 1]
+                    if (type !== TKS.TABLE_SPLIT) {
+                        if (lastRow.length === 0) {
+                            lastRow.push([])
+                        }
+                        lastRow[lastRow.length - 1].push(tokens[index])
+                    } else {
+                        lastRow.push([])
+                    }
+                }
+
+                if (tokens.slice(index + 1, index + 3).every(i => helper.isLineEnd(i))) {
+                    this.content.push(tokens[index])
+                    // 如果字符串
                     return {
                         offset: 1,
                     }
