@@ -1,4 +1,3 @@
-
 import nodeType, { TOKEN_TYPE as TKS } from './nodeType.js'
 // @ts-check
 // TODO:
@@ -16,39 +15,15 @@ class Token {
     }
 }
 
-
-/**
- * type: String,
-    children: ASTNode[],
-    value?: String,
-    src?: String,
-    alt?: String,
-    language?: String,
-    listStyleType?: String,
-    raw: {
-        start: Number,
-        end: Number,
-        text: String,
-    }
- * */
-
-class MNode {
-    constructor(type, tokens = []) {
-        this.type = type
-        this.tokens = tokens
-        this.children = []
-    }
-}
-
 function astNode(type, tokens = [], properties = {}) {
     return {
         type,
         tokens,
         children: [],
         // 方便元素快速访问其父元素
-        push(...args) {
-            args.forEach(i => i.__parent = this)
-            this.children.push(...args)
+        push(child) {
+            child.__parent = this
+            this.children.push(child)
             return this
         },
         get value() {
@@ -1025,38 +1000,6 @@ function isTable(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
-function time(fn) {
-    console.time('性能')
-    fn()
-    console.timeEnd('性能')
-}
-
 export function parser(str = '') {
     return toAST(token(str))
 }
-
-
-// let result
-// time(() => {
-// result = toAST(token(`
-// ### sdffffgggggg
-// - 111-11111 ![11]( 111)[d
-//     sds](dg
-//         sfd)
-
-// \`111\`
-// \`\`\`
-// \`\`
-// 123344444
-// \`\`\`
-// <hfffffffff>
-
-// > 你好吗
-// ## sddd
-// - 很霸道是非得失
-
-
-// -fffffffff`.repeat(1)))
-// })
-// console.log(result)
-
