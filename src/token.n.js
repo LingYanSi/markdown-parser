@@ -387,9 +387,19 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isNoOrderList(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType.li, matchTokens)
-            parseInlineNodeLoop(info.children, node)
+        if (isList(index, tokens, (matchTokens, info) => {
+            const node = astNode(nodeType.ul, matchTokens)
+
+            info.forEach(item => {
+                const liNode = astNode(nodeType.li)
+                parseInlineNodeLoop(item.head, liNode)
+                item.children.forEach(ele => {
+                    parseInlineNodeLoop(ele.content, liNode)
+                })
+                node.push(liNode)
+            })
+
+            // parseInlineNodeLoop(info.children, node)
             root.push(node)
             index += matchTokens.length
         })) {
@@ -794,34 +804,92 @@ function isBlockQuote(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
-function isNoOrderList(index, tokens, handler) {
+function isList(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
     }
 
-    const queue = [
-        helper.getIdentMatcher(),
-        TKS.NO_ORDER_LIST,
-        {
-            content: [],
-            children: [], // 二位数组 [[第一行], [第二行]]
-            name: 'children',
-            test(type, index, tokens) {
-                if (helper.isLineEnd(tokens[index + 1])) {
-                    // 需要解决立马遇到行尾的问题
-                    this.content.push(tokens[index])
-                    return {
-                        offset: 2, // TODO:忽略结尾token，但其实应当添加到info上
-                    }
-                }
+    const mtks = []
+    const liList = []
 
-                return helper.goOn
-            },
+    // 先获取ident，然后判断是不是 - / +
+    // 如果不是，就向前一个对象的children push
+    // 如果是就新增一个对象
+    while (true) {
+        // 遇到两个换行结束遍历
+        if (tokens.slice(index, index + 2).every(i => helper.isLineEnd(i))) {
+            break
         }
-    ]
 
-    // 需要一个描述符号 \n{0,2}$
-    return matchUsefulTokens(index, tokens, queue, handler)
+        if (
+            matchUsefulTokens(index, tokens, [
+                helper.getIdentMatcher(),
+                TKS.NO_ORDER_LIST,
+                {
+                    content: [],
+                    name: 'head',
+                    test(type, index, tokens) {
+                        if (helper.isLineEnd(tokens[index])) {
+                            // 需要解决立马遇到行尾的问题
+                            this.content.push(tokens[index])
+                            return {
+                                offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
+                            }
+                        }
+                        return helper.goOn
+                    },
+                }
+            ], (mts, info) => {
+                index += mts.length
+                mtks.push(...mts)
+                liList.push({
+                    ident: info.ident,
+                    head: info.head,
+                    children: [],
+                    tokens: mts,
+                })
+            })
+        ) {
+            continue
+        }
+
+        if (liList.length === 0) {
+            return
+        }
+
+        if (
+            matchUsefulTokens(index, tokens, [
+                {
+                    content: [],
+                    name: 'content',
+                    test(type, index, tokens) {
+                        if (helper.isLineEnd(tokens[index])) {
+                            // 需要解决立马遇到行尾的问题
+                            this.content.push(tokens[index])
+                            return {
+                                offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
+                            }
+                        }
+                        return helper.goOn
+                    },
+                }
+            ], (mts, info) => {
+                index += mts.length
+                mtks.push(...mts)
+                liList[liList.length - 1].children.push({
+                    type: 'normal',
+                    content: info.content,
+                    tokens: mts,
+                })
+            })
+        ) {
+            continue
+        }
+
+        break
+    }
+
+    return liList.length !== 0 && handler(mtks, liList)
 }
 
 function isTable(index, tokens, handler) {
