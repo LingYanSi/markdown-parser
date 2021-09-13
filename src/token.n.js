@@ -389,6 +389,7 @@ function toAST(tokens, defaultRoot) {
 
         if (isList(index, tokens, (matchTokens, info) => {
             const node = astNode(nodeType.ul, matchTokens)
+            node.listStyleType = info[0].listStyleType
 
             info.forEach(item => {
                 const liNode = astNode(nodeType.li)
@@ -824,7 +825,24 @@ function isList(index, tokens, handler) {
         if (
             matchUsefulTokens(index, tokens, [
                 helper.getIdentMatcher(),
-                TKS.NO_ORDER_LIST,
+                {
+                    content: [],
+                    name: 'listType',
+                    test(type, index, tokens) {
+                        if ([TKS.NO_ORDER_LIST, TKS.ORDER_LIST].includes(type)) {
+                            this.content.push(tokens[index])
+                            // 'disc', // 实心圆
+                            // 'circle', // 空心圆
+                            // 'square', // 方块
+                            this.listStyleType = type === TKS.NO_ORDER_LIST ? 'disc' : 'decimal'
+                            return {
+                                offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
+                            }
+                        }
+
+                        return false
+                    },
+                },
                 {
                     content: [],
                     name: 'head',
@@ -845,6 +863,7 @@ function isList(index, tokens, handler) {
                 liList.push({
                     ident: info.ident,
                     head: info.head,
+                    listStyleType: info.listType_raw.listStyleType,
                     children: [],
                     tokens: mts,
                 })
