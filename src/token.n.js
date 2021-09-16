@@ -176,8 +176,8 @@ const helper = {
         const token = tokens[index - 1]
         return !token || token.type === TKS.LINE_END
     },
-    isSomeType(token, type) {
-        return token && token.type === type
+    isType(token, ...types) {
+        return token && types.includes(token.type)
     },
     // 继续向后匹配表示
     goOn: {
@@ -549,7 +549,7 @@ function isInlineCode(index, tokens, handler) {
     // 不能是连续的``
     if (
         tokens[index].type !== TKS.CODE_BLOCK
-        || helper.isSomeType(tokens[index + 1], TKS.CODE_BLOCK)
+        || helper.isType(tokens[index + 1], TKS.CODE_BLOCK)
     ) {
         return false
     }
@@ -898,22 +898,36 @@ function isTable(index, tokens, handler) {
             children: [],
             name: 'thead',
             test(type, index, tokens) {
-                // ----|----|------
+                // 期望字符
                 if (type !== TKS.TABLE_SPLIT) {
                     if (this.children.length === 0) {
+                        // 忽略行首的空格
+                        if (type === TKS.WHITE_SPACE) {
+                            return helper.goOn
+                        }
                         this.children.push([])
                     }
+
+                    // 需要时连续的 - ， --之间不能有空格
                     this.children[this.children.length - 1].push(tokens[index])
-                } else {
-                    this.hasSplit = true // 没有split解析失败
-                    this.children.push([])
+                } else if (type === TKS.TABLE_SPLIT) {
+                    // 下一个是有效字符
+                    // 第一个是空格 第二个是有效字符
+                    if (
+                        !helper.isType(tokens[index + 1], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT)
+                        || (helper.isType(tokens[index + 1], TKS.WHITE_SPACE) && !helper.isType(tokens[index + 2], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT))
+                    ) {
+                        this.hasSplit = true
+                        this.children.push([])
+                    }
                 }
 
+                // ----|----|------
                 if (helper.isLineEnd(tokens[index])) {
-                    this.hasSplit && console.log('thead end', index, tokens.slice(index, index + 3))
-                    if (!this.hasSplit) {
-                        this.stop = true
+                    if (!this.hasSplit || this.children.length === 0) {
+                        return false
                     }
+
                     this.content.push(tokens[index])
                     // 如果字符串
                     return {
@@ -929,6 +943,7 @@ function isTable(index, tokens, handler) {
             name: 'split',
             children: [],
             test(type, index, tokens) {
+                // 不会存在连续的空格
                 if (![TKS.NO_ORDER_LIST, TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT].includes(type)) {
                     this.stop = true
                     return false
@@ -936,19 +951,31 @@ function isTable(index, tokens, handler) {
 
                 if (type !== TKS.TABLE_SPLIT) {
                     if (this.children.length === 0) {
+                        // 忽略行首的空格
+                        if (type === TKS.WHITE_SPACE) {
+                            return helper.goOn
+                        }
                         this.children.push([])
                     }
+
                     // 需要时连续的 - ， --之间不能有空格
                     this.children[this.children.length - 1].push(tokens[index])
-                } else {
-                    this.hasSplit = true // 标识一下是否有split，如果没有的话，解析失败
-                    this.children.push([])
+                } else if (type === TKS.TABLE_SPLIT) {
+                    // 第一个是 -
+                    // 第一个是空格 第二个是 -
+                    if (
+                        helper.isType(tokens[index + 1], TKS.NO_ORDER_LIST)
+                        || (helper.isType(tokens[index + 1], TKS.WHITE_SPACE) && helper.isType(tokens[index + 2], TKS.NO_ORDER_LIST))
+                    ) {
+                        this.hasSplit = true
+                        this.children.push([])
+                    }
                 }
 
                 // ----|----|------
                 if (helper.isLineEnd(tokens[index])) {
-                    if (!this.hasSplit) {
-                        this.stop = true
+                    if (!this.hasSplit || this.children.length === 0) {
+                        return false
                     }
 
                     this.content.push(tokens[index])
@@ -970,6 +997,9 @@ function isTable(index, tokens, handler) {
                     this.children.push([])
                 } else {
                     if (this.children.length === 0) {
+                        if (type === TKS.WHITE_SPACE) {
+                            return helper.goOn
+                        }
                         this.children.push([])
                     }
                     const lastRow = this.children[this.children.length - 1]
@@ -979,7 +1009,12 @@ function isTable(index, tokens, handler) {
                         }
                         lastRow[lastRow.length - 1].push(tokens[index])
                     } else {
-                        lastRow.push([])
+                        if (
+                            !helper.isType(tokens[index + 1], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT)
+                            || (helper.isType(tokens[index + 1], TKS.WHITE_SPACE) && !helper.isType(tokens[index + 2], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT))
+                        ) {
+                            lastRow.push([])
+                        }
                     }
                 }
 
