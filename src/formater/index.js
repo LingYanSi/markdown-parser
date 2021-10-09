@@ -1,5 +1,5 @@
 import nodeType from './../nodeType.js';
-import { parser } from './../token.n.js';
+import { parser } from './../tokenizer.js';
 import { join, getRealLen, padEnd } from './strHelper.js';
 
 /** @typedef {import("./../../@type/index").ASTNode} ASTNode */

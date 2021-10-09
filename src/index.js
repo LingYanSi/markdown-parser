@@ -1,5 +1,5 @@
 import { diffNode } from './diff.js';
-import { parser } from './token.n.js';
+import { parser } from './tokenizer.js';
 import patch from './patch.js';
 import trans from './trans.js';
 import { getParserNodeInfo } from './helper.js';

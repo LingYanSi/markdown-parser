@@ -158,13 +158,41 @@ function watchAfterUtil(index, tokens, fn) {
 }
 
 function watchAfter(tokens, offset, length = 1) {
-    return tokens.slice(offset + 1, offset + length + 1)
+    // 使用for循环替代slice，因为slice不会严格返回指定长度的数组
+    const sliceTK = []
+    for (let index = offset + 1; index < offset + length + 1; index++) {
+        sliceTK.push(tokens[index])
+    }
+    return sliceTK
+
+    // return tokens.slice(offset + 1, offset + length + 1)
 }
 
 const helper = {
     // 判断当前token是不是行尾，或者文本结束
     isLineEnd(token) {
         return !token || token.type === TKS.LINE_END
+    },
+    checkIsEnd(tokens, index) {
+        const [currentToken, nextToken] = [tokens[index], tokens[index + 1]]
+
+        if (!currentToken) {
+            return {
+                match: []
+            }
+        } else if (currentToken.type === TKS.LINE_END) {
+            return {
+                match: [currentToken]
+            }
+        }
+
+        if (!nextToken) {
+            return {
+                match: [currentToken]
+            }
+        }
+
+        return {}
     },
     // 判断下一个字符是不是行尾
     nextIsLienEnd(tokens, index) {
@@ -325,6 +353,9 @@ function toAST(tokens, defaultRoot) {
 
     while (index < tokens.length) {
         const token = tokens[index]
+        if (!token) {
+            break
+        }
         // 是不是行首
         // parse head
         if(token.type === TKS.LINE_END) {
@@ -362,26 +393,6 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isList(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType.ul, matchTokens)
-            node.listStyleType = info[0].listStyleType
-
-            info.forEach(item => {
-                const liNode = astNode(nodeType.li)
-                parseInlineNodeLoop(item.head, liNode)
-                item.children.forEach(ele => {
-                    parseInlineNodeLoop(ele.content, liNode)
-                })
-                node.push(liNode)
-            })
-
-            // parseInlineNodeLoop(info.children, node)
-            root.push(node)
-            index += matchTokens.length
-        })) {
-            continue
-        }
-
         if (isTable(index, tokens, (matchTokens, info) => {
             const node = astNode(nodeType.table, matchTokens)
             const thead = astNode(nodeType.thead, info.thead)
@@ -408,6 +419,34 @@ function toAST(tokens, defaultRoot) {
             })
 
             node.push(tbody)
+
+            root.push(node)
+            index += matchTokens.length
+        })) {
+            continue
+        }
+
+        if (isHr(index, tokens, (matchTokens) => {
+            const node = astNode(nodeType.hr, matchTokens)
+
+            root.push(node)
+            index += matchTokens.length
+        })) {
+            continue
+        }
+
+        if (isList(index, tokens, (matchTokens, info) => {
+            const node = astNode(nodeType.ul, matchTokens)
+            node.listStyleType = info[0].listStyleType
+
+            info.forEach(item => {
+                const liNode = astNode(nodeType.li)
+                parseInlineNodeLoop(item.head, liNode)
+                item.children.forEach(ele => {
+                    parseInlineNodeLoop(ele.content, liNode)
+                })
+                node.push(liNode)
+            })
 
             root.push(node)
             index += matchTokens.length
@@ -735,7 +774,7 @@ function isBlockCode(index, tokens, handler) {
                             if (at === 2) {
                                 return helper.isLineEnd(item)
                             }
-                            return item.type === TKS.CODE_BLOCK
+                            return helper.isType(item, TKS.CODE_BLOCK)
                         })
                     ) ? {
                         offset: 3,
@@ -743,6 +782,33 @@ function isBlockCode(index, tokens, handler) {
                 }
 
                 return helper.goOn
+            },
+        }
+    ]
+
+    return matchUsefulTokens(index, tokens, queue, handler)
+}
+
+function isHr(index, tokens, handler) {
+    // 实现一个简单的向前向后看的正则
+    const queue = [
+        {
+            content: [],
+            name: 'hr',
+            test(type, index, tokens) {
+                // 通过向前看，向后看以解析判断，是否命中Node节点
+                if (type === TKS.NO_ORDER_LIST) {
+                    const isMatch = helper.isLineStart(tokens, index)
+                        && watchAfter(tokens, index, 3).every((item, at) => {
+                            if (at === 2) {
+                                return helper.isLineEnd(item)
+                            }
+                            return helper.isType(item, TKS.NO_ORDER_LIST)
+                        })
+                    return isMatch ? { offset: 3 } : false
+                }
+
+                return false
             },
         }
     ]
@@ -822,13 +888,17 @@ function isList(index, tokens, handler) {
                     content: [],
                     name: 'head',
                     test(type, index, tokens) {
-                        if (helper.isLineEnd(tokens[index])) {
+                        // 暗含的意思
+
+                        const result = helper.checkIsEnd(tokens, index)
+                        if (result.match) {
                             // 需要解决立马遇到行尾的问题
-                            this.content.push(tokens[index])
+                            this.content.push(...result.match)
                             return {
-                                offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
+                                offset: result.match.length, // TODO:忽略结尾token，但其实应当添加到info上
                             }
                         }
+
                         return helper.goOn
                     },
                 }
@@ -883,7 +953,12 @@ function isList(index, tokens, handler) {
         break
     }
 
-    return liList.length !== 0 && handler(mtks, liList)
+    if (liList.length !== 0) {
+        handler(mtks, liList)
+        return true
+    }
+
+    return false
 }
 
 function isTable(index, tokens, handler) {
