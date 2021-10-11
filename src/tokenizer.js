@@ -16,9 +16,9 @@ class Token {
 }
 
 class ASTNode {
-    constructor() {
-        this.type = ''
-        this.tokens = []
+    constructor(type = '', tokens = []) {
+        this.type = type
+        this.tokens = tokens
         this.children = []
     }
     /**
@@ -41,9 +41,7 @@ class ASTNode {
 }
 
 function createAstNode(type, tokens = [], properties = {}) {
-    const ast = new ASTNode()
-    ast.type = type
-    ast.tokens = tokens
+    const ast = new ASTNode(type, tokens)
     Object.assign(ast, properties)
     return ast
 }
