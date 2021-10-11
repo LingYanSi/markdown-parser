@@ -15,26 +15,37 @@ class Token {
     }
 }
 
-function astNode(type, tokens = [], properties = {}) {
-    return {
-        type,
-        tokens,
-        children: [],
-        // 方便元素快速访问其父元素
-        push(child) {
-            child.__parent = this
-            this.children.push(child)
-            return this
-        },
-        get value() {
-            if (this.type !== nodeType.text) return ''
-            return this.tokens.map(i => i.raw).join('')
-        },
-        get raw() {
-            return this.children.map(i => i.tokens.map(i => i.raw).join('')).join('') || this.tokens.map(i => i.raw).join('')
-        },
-        ...properties,
+class ASTNode {
+    constructor() {
+        this.type = ''
+        this.tokens = []
+        this.children = []
     }
+    /**
+     * @param {ASTNode} child
+     * @returns
+     * @memberof ASTNode
+     */
+    push(child) {
+        child.__parent = this
+        this.children.push(child)
+        return this
+    }
+    get value() {
+        if (this.type !== nodeType.text) return ''
+        return this.tokens.map(i => i.raw).join('')
+    }
+    get raw() {
+        return this.children.map(i => i.tokens.map(i => i.raw).join('')).join('') || this.tokens.map(i => i.raw).join('')
+    }
+}
+
+function createAstNode(type, tokens = [], properties = {}) {
+    const ast = new ASTNode()
+    ast.type = type
+    ast.tokens = tokens
+    Object.assign(ast, properties)
+    return ast
 }
 
 function token(input = '') {
@@ -267,13 +278,13 @@ const helper = {
  * 解析行内元素
  * @param {number} index
  * @param {Token[]} tokens
- * @param {*} parentNode
+ * @param {ASTNode} parentNode
  * @returns
  */
 function toInlineNode(index, tokens, parentNode) {
     const token = tokens[index]
-    if (isImg(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.img, matchTokens)
+    if (parseImg(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.img, matchTokens)
         node.src = helper.tokensToString(info.src)
         node.alt = helper.tokensToString(info.alt)
         parentNode.push(node)
@@ -282,39 +293,39 @@ function toInlineNode(index, tokens, parentNode) {
         return index
     }
 
-    if (isUrl(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.url, matchTokens, {
+    if (parseUrl(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.url, matchTokens, {
             href: helper.tokensToString(info.src),
         })
-        node.push(astNode(nodeType.text, info.alt))
+        node.push(createAstNode(nodeType.text, info.alt))
         parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    if (isInlineCode(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.inlineCode, matchTokens)
-        node.push(astNode(nodeType.text, info.code))
+    if (parseInlineCode(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.inlineCode, matchTokens)
+        node.push(createAstNode(nodeType.text, info.code))
         parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    if (isSimpleUrl(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.url, matchTokens, {
+    if (parseSimpleUrl(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.url, matchTokens, {
             href: helper.tokensToString(info.src),
         })
-        node.push(astNode(nodeType.text, info.src))
+        node.push(createAstNode(nodeType.text, info.src))
         parentNode.push(node)
         index += matchTokens.length
     })) {
         return index
     }
 
-    if (isLineThrough(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.linethrough, matchTokens)
+    if (parseLineThrough(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.linethrough, matchTokens)
         parseInlineNodeLoop(info.content, node)
         parentNode.push(node)
         index += matchTokens.length
@@ -322,8 +333,8 @@ function toInlineNode(index, tokens, parentNode) {
         return index
     }
 
-    if (isBlob(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.blod, matchTokens)
+    if (parseBlob(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.blod, matchTokens)
         parseInlineNodeLoop(info.content, node)
         parentNode.push(node)
         index += matchTokens.length
@@ -331,8 +342,8 @@ function toInlineNode(index, tokens, parentNode) {
         return index
     }
 
-    if (isItalic(index, tokens, (matchTokens, info) => {
-        const node = astNode(nodeType.italic, matchTokens)
+    if (parseItalic(index, tokens, (matchTokens, info) => {
+        const node = createAstNode(nodeType.italic, matchTokens)
         parseInlineNodeLoop(info.content, node)
         parentNode.push(node)
         index += matchTokens.length
@@ -344,7 +355,7 @@ function toInlineNode(index, tokens, parentNode) {
     if (lastMnode && lastMnode.type === nodeType.text) {
         lastMnode.tokens.push(token)
     } else {
-        parentNode.push(astNode(nodeType.text, [token]))
+        parentNode.push(createAstNode(nodeType.text, [token]))
     }
 
     index += 1
@@ -355,7 +366,7 @@ function toInlineNode(index, tokens, parentNode) {
 /**
  * 解析行内节点
  * @param {Token[]} tokens
- * @param {*} parentNode
+ * @param {ASTNode} parentNode
  */
 function parseInlineNodeLoop(tokens, parentNode) {
     let index = 0
@@ -370,7 +381,7 @@ function parseInlineNodeLoop(tokens, parentNode) {
  * @param {Token[]} tokens
  */
 function toAST(tokens, defaultRoot) {
-    const root = defaultRoot || astNode(nodeType.root, tokens)
+    const root = defaultRoot || createAstNode(nodeType.root, tokens)
     let index = 0
 
     while (index < tokens.length) {
@@ -381,13 +392,13 @@ function toAST(tokens, defaultRoot) {
         // 是不是行首
         // parse head
         if(token.type === TKS.LINE_END) {
-            root.push(astNode(nodeType.br, [token]))
+            root.push(createAstNode(nodeType.br, [token]))
             index += 1
             continue
         }
 
-        if (isHead(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType['h' + info.headLevel.length], matchTokens)
+        if (parseHead(index, tokens, (matchTokens, info) => {
+            const node = createAstNode(nodeType['h' + info.headLevel.length], matchTokens)
             parseInlineNodeLoop(info.children, node)
             root.push(node)
             index += matchTokens.length
@@ -395,9 +406,9 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isBlockCode(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType.code, matchTokens, {
-                value: helper.tokensToString(info.code),
+        if (parseBlockCode(index, tokens, (matchTokens, info) => {
+            const node = createAstNode(nodeType.code, matchTokens, {
+                code: helper.tokensToString(info.code),
                 language: helper.tokensToString(info.language).trim(),
             })
             root.push(node)
@@ -406,8 +417,8 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isBlockQuote(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType.queto, matchTokens)
+        if (parseBlockQuote(index, tokens, (matchTokens, info) => {
+            const node = createAstNode(nodeType.queto, matchTokens)
             toAST(info.children, node)
             root.push(node)
             index += matchTokens.length
@@ -415,26 +426,26 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isTable(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType.table, matchTokens)
-            const thead = astNode(nodeType.thead, info.thead)
+        if (parseTable(index, tokens, (matchTokens, info) => {
+            const node = createAstNode(nodeType.table, matchTokens)
+            const thead = createAstNode(nodeType.thead, info.thead)
 
-            const theadTr = astNode(nodeType.tr, info.thead)
+            const theadTr = createAstNode(nodeType.tr, info.thead)
             thead.push(theadTr)
             info.thead_raw.children.forEach(item => {
-                const th = astNode(nodeType.th, item)
+                const th = createAstNode(nodeType.th, item)
                 parseInlineNodeLoop(item, th)
                 theadTr.push(th)
             })
 
             node.push(thead)
 
-            const tbody = astNode(nodeType.tbody, info.tbody)
+            const tbody = createAstNode(nodeType.tbody, info.tbody)
             info.tbody_raw.children.forEach(item => {
-                const tbodyTr = astNode(nodeType.tr, info.tbody)
+                const tbodyTr = createAstNode(nodeType.tr, info.tbody)
                 tbody.push(tbodyTr)
                 item.forEach(ele => {
-                    const td = astNode(nodeType.td, item)
+                    const td = createAstNode(nodeType.td, item)
                     parseInlineNodeLoop(ele, td)
                     tbodyTr.push(td)
                 })
@@ -448,8 +459,8 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isHr(index, tokens, (matchTokens) => {
-            const node = astNode(nodeType.hr, matchTokens)
+        if (parseHr(index, tokens, (matchTokens) => {
+            const node = createAstNode(nodeType.hr, matchTokens)
 
             root.push(node)
             index += matchTokens.length
@@ -457,12 +468,12 @@ function toAST(tokens, defaultRoot) {
             continue
         }
 
-        if (isList(index, tokens, (matchTokens, info) => {
-            const node = astNode(nodeType.ul, matchTokens)
+        if (parseList(index, tokens, (matchTokens, info) => {
+            const node = createAstNode(nodeType.ul, matchTokens)
             node.listStyleType = info[0].listStyleType
 
             info.forEach(item => {
-                const liNode = astNode(item.nodeType || nodeType.li)
+                const liNode = createAstNode(item.nodeType || nodeType.li)
                 parseInlineNodeLoop(item.head, liNode)
                 item.children.forEach(ele => {
                     parseInlineNodeLoop(ele.content, liNode)
@@ -557,14 +568,14 @@ function matchUsefulTokens(index, tokens, queue, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isImg(index, tokens, handler) {
+function parseImg(index, tokens, handler) {
     if (!helper.isType(tokens[index], TKS.IMG_START)) {
         return false
     }
 
     const matchTokens = [tokens[index]]
 
-    if (isUrl(index+1, tokens, (urlMatchTokens, info) => {
+    if (parseUrl(index+1, tokens, (urlMatchTokens, info) => {
         handler(matchTokens.concat(urlMatchTokens), info)
     })) {
         return true
@@ -580,7 +591,7 @@ function isImg(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isUrl(index, tokens, handler) {
+function parseUrl(index, tokens, handler) {
     // 如何完美结合起来
     const queue = [
         TKS.URL_DESC_START,
@@ -610,7 +621,7 @@ function isUrl(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isSimpleUrl(index, tokens, handler) {
+function parseSimpleUrl(index, tokens, handler) {
     const queue = [
         TKS.SIMPLE_URL_START,
         {
@@ -637,7 +648,7 @@ function isSimpleUrl(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isInlineCode(index, tokens, handler) {
+function parseInlineCode(index, tokens, handler) {
     // 不能是连续的``
     if (
         helper.isType(tokens[index], TKS.CODE_BLOCK)
@@ -674,7 +685,7 @@ function isInlineCode(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isLineThrough(index, tokens, handler) {
+function parseLineThrough(index, tokens, handler) {
     const queue = [
         TKS.LINE_THROUGH,
         TKS.LINE_THROUGH,
@@ -705,7 +716,7 @@ function isLineThrough(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isItalic(index, tokens, handler) {
+function parseItalic(index, tokens, handler) {
     const queue = [
         TKS.BLOB,
         {
@@ -734,7 +745,7 @@ function isItalic(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isBlob(index, tokens, handler) {
+function parseBlob(index, tokens, handler) {
     const queue = [
         TKS.BLOB,
         TKS.BLOB,
@@ -765,7 +776,7 @@ function isBlob(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isHead(index, tokens, handler) {
+function parseHead(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
     }
@@ -819,7 +830,7 @@ function isHead(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isBlockCode(index, tokens, handler) {
+function parseBlockCode(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
     }
@@ -884,7 +895,7 @@ function isBlockCode(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isHr(index, tokens, handler) {
+function parseHr(index, tokens, handler) {
     // 实现一个简单的向前向后看的正则
     const queue = [
         {
@@ -918,7 +929,7 @@ function isHr(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isBlockQuote(index, tokens, handler) {
+function parseBlockQuote(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
     }
@@ -956,7 +967,7 @@ function isBlockQuote(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isList(index, tokens, handler) {
+function parseList(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
     }
@@ -1116,7 +1127,7 @@ function isList(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
-function isTable(index, tokens, handler) {
+function parseTable(index, tokens, handler) {
     // 如果下一行的内容是  |----|----| 这种格式，则表示是table表格
     if (!helper.isLineStart(tokens, index)) {
         return false

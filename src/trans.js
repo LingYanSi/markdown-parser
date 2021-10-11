@@ -108,7 +108,7 @@ export default function trans(node, $parent, option = {}) {
                         );
                         break;
                     }
-                    case 'value': {
+                    case 'code': {
                         code.textContent = newNode[key]; // 不能使用innerHTML
                         break;
                     }
@@ -117,7 +117,7 @@ export default function trans(node, $parent, option = {}) {
                 }
             };
             node.__update('language', node);
-            node.__update('value', node);
+            node.__update('code', node);
             ele.appendChild(code);
             break;
         }
