@@ -20,6 +20,7 @@ class ASTNode {
         this.type = type
         this.tokens = tokens
         this.children = []
+        this.value = ''
     }
     /**
      * @param {ASTNode} child
@@ -31,10 +32,14 @@ class ASTNode {
         this.children.push(child)
         return this
     }
-    get value() {
-        if (this.type !== nodeType.text) return ''
-        return this.tokens.map(i => i.raw).join('')
+
+    // 可以把连续的text token合并成一个Text Node
+    addToken(token) {
+        token && this.tokens.push(token)
+        // 仅对于text node才有value属性
+        this.value = this.tokens.map(i => i.raw).join('')
     }
+
     get raw() {
         return this.children.map(i => i.tokens.map(i => i.raw).join('')).join('') || this.tokens.map(i => i.raw).join('')
     }
@@ -43,6 +48,9 @@ class ASTNode {
 function createAstNode(type, tokens = [], properties = {}) {
     const ast = new ASTNode(type, tokens)
     Object.assign(ast, properties)
+    if (type === nodeType.text) {
+        ast.addToken()
+    }
     return ast
 }
 
@@ -52,7 +60,7 @@ function token(input = '') {
     let index = 0
     while (index < input.length) {
         const char = input[index]
-
+        let offset = 1
         switch(char) {
             case '-': {
                 tokens.push(new Token(TKS.NO_ORDER_LIST, char, index, index+1))
@@ -112,7 +120,7 @@ function token(input = '') {
             }
             case ' ': {
                 const lastToken = tokens[tokens.length - 1]
-                if (lastToken && lastToken.type === 'WHITE_SPACE') {
+                if (lastToken && lastToken.type === TKS.WHITE_SPACE) {
                     lastToken.raw += char
                     lastToken.end += 1
                 } else {
@@ -126,17 +134,22 @@ function token(input = '') {
                 break
             }
             default: {
+                // 向后看一位
+                const nextChar = input[index + 1]
+                let str = '';
+                // 处理转译字符\，避免关键char不能够正常显示
+                [str, offset] = (char === '\\' && nextChar) ? [nextChar, 2] : [char, 1];
                 const lastToken = tokens[tokens.length - 1]
                 if (lastToken && lastToken.type === TKS.STRING) {
-                    lastToken.raw += char
-                    lastToken.end += 1
+                    lastToken.raw += str
+                    lastToken.end += offset
                 } else {
-                    tokens.push(new Token(TKS.STRING, char, index, index+1))
+                    tokens.push(new Token(TKS.STRING, str, index, index + offset))
                 }
             }
         }
 
-        index++
+        index += offset
     }
 
     return tokens
@@ -187,8 +200,6 @@ function watchAfter(tokens, offset, length = 1) {
         sliceTK.push(tokens[index])
     }
     return sliceTK
-
-    // return tokens.slice(offset + 1, offset + length + 1)
 }
 
 const helper = {
@@ -349,9 +360,9 @@ function toInlineNode(index, tokens, parentNode) {
         return index
     }
 
-    const lastMnode = parentNode[parentNode.length - 1]
+    const lastMnode = parentNode.children[parentNode.children.length - 1]
     if (lastMnode && lastMnode.type === nodeType.text) {
-        lastMnode.tokens.push(token)
+        lastMnode.addToken(token)
     } else {
         parentNode.push(createAstNode(nodeType.text, [token]))
     }
@@ -1232,7 +1243,7 @@ function parseTable(index, tokens, handler) {
             children: [], // [[[xxx], [yyyyy]], []]
             name: 'tbody', // 二级嵌套
             test(type, index, tokens) {
-                if (type === TKS.LINE_END) {
+                if (helper.isType(type, TKS.LINE_END)) {
                     this.children.push([])
                 } else {
                     if (this.children.length === 0) {
@@ -1242,18 +1253,23 @@ function parseTable(index, tokens, handler) {
                         this.children.push([])
                     }
                     const lastRow = this.children[this.children.length - 1]
-                    if (!helper.isType(type, TKS.TABLE_SPLIT)) {
+
+                    // | xcxxx
+                    if (helper.isType(type, TKS.TABLE_SPLIT)) {
+                        if (
+                            !helper.isType(tokens[index + 1], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT)
+                            || (
+                                helper.isType(tokens[index + 1], TKS.WHITE_SPACE)
+                                && !helper.isType(tokens[index + 2], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT)
+                            )
+                        ) {
+                            lastRow.push([])
+                        }
+                    } else {
                         if (lastRow.length === 0) {
                             lastRow.push([])
                         }
                         lastRow[lastRow.length - 1].push(tokens[index])
-                    } else {
-                        if (
-                            !helper.isType(tokens[index + 1], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT)
-                            || (helper.isType(tokens[index + 1], TKS.WHITE_SPACE) && !helper.isType(tokens[index + 2], TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT))
-                        ) {
-                            lastRow.push([])
-                        }
                     }
                 }
 
