@@ -157,6 +157,13 @@ function watchAfterUtil(index, tokens, fn) {
     }
 }
 
+/**
+ * 向后看几个token，以判断是否符合预期
+ * @param {Token[]} tokens
+ * @param {number} offset 当前index
+ * @param {number} [length=1] 需要后续几个token
+ * @returns
+ */
 function watchAfter(tokens, offset, length = 1) {
     // 使用for循环替代slice，因为slice不会严格返回指定长度的数组
     const sliceTK = []
@@ -440,7 +447,7 @@ function toAST(tokens, defaultRoot) {
             node.listStyleType = info[0].listStyleType
 
             info.forEach(item => {
-                const liNode = astNode(nodeType.li)
+                const liNode = astNode(item.nodeType || nodeType.li)
                 parseInlineNodeLoop(item.head, liNode)
                 item.children.forEach(ele => {
                     parseInlineNodeLoop(ele.content, liNode)
@@ -475,6 +482,11 @@ function matchUsefulTokens(index, tokens, queue, handler) {
     watchAfterUtil(index, tokens, (item, currentIndex, moveIndex) => {
         while (true) {
             if (typeof queue[queueTypeIndex] === 'object') {
+                // offset的偏移 + index大于tokens长度时，item不存在了
+                if (!item) {
+                    break
+                }
+
                 const testResult = queue[queueTypeIndex].test(item.type, currentIndex, tokens)
                 if (helper.isCanGoOn(testResult)) {
                     queue[queueTypeIndex].content.push(item)
@@ -482,18 +494,15 @@ function matchUsefulTokens(index, tokens, queue, handler) {
                     return true
                 }
 
-                if (!testResult) {
-                    queue[queueTypeIndex].stop = true
-                }
-
                 // 终止向下解析
-                if (queue[queueTypeIndex].stop) {
+                if (!testResult || queue[queueTypeIndex].stop) {
                     return false
                 }
 
                 // 移动index
                 if (testResult.offset > 0) {
                     matchTokens.push(...tokens.slice(currentIndex, currentIndex + testResult.offset));
+                    // 根据offset去矫正偏移量
                     [item, currentIndex] = moveIndex(testResult.offset)
                 }
 
@@ -869,6 +878,8 @@ function isList(index, tokens, handler) {
                 {
                     content: [],
                     name: 'listType',
+                    nodeType: nodeType.li,
+                    listStyleType: '',
                     test(type, index, tokens) {
                         if ([TKS.NO_ORDER_LIST, TKS.ORDER_LIST].includes(type)) {
                             this.content.push(tokens[index])
@@ -876,6 +887,42 @@ function isList(index, tokens, handler) {
                             // 'circle', // 空心圆
                             // 'square', // 方块
                             this.listStyleType = type === TKS.NO_ORDER_LIST ? 'disc' : 'decimal'
+
+                            let todoType = ''
+                            const isMatchTodo = watchAfter(tokens, index, 5).every((i, index) => {
+                                switch(index) {
+                                    case 0:
+                                        return helper.isType(i, TKS.WHITE_SPACE)
+                                    case 1:
+                                        return helper.isType(i, TKS.URL_DESC_START)
+                                    case 2: {
+                                        if (helper.isType(i, TKS.WHITE_SPACE)) {
+                                            todoType = nodeType.li_todo
+                                            return true
+                                        }
+
+                                        if (helper.isType(i, TKS.STRING) && i.raw === 'x') {
+                                            todoType = nodeType.li_done
+                                            return true
+                                        }
+                                        return false
+                                    }
+                                    case 3:
+                                        return helper.isType(i, TKS.URL_DESC_END)
+                                    case 4:
+                                        return helper.isType(i, TKS.WHITE_SPACE) || helper.isLineEnd(i)
+                                }
+                            })
+
+                            if (isMatchTodo) {
+                                this.content.push(...watchAfter(tokens, index, 4))
+                                this.nodeType = todoType
+                                return {
+                                    offset: 5,
+                                }
+                            }
+
+
                             return {
                                 offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
                             }
@@ -909,6 +956,7 @@ function isList(index, tokens, handler) {
                     ident: info.ident,
                     head: info.head,
                     listStyleType: info.listType_raw.listStyleType,
+                    nodeType: info.listType_raw.nodeType,
                     children: [],
                     tokens: mts,
                 })
@@ -1093,7 +1141,7 @@ function isTable(index, tokens, handler) {
                     }
                 }
 
-                if (tokens.slice(index + 1, index + 3).every(i => helper.isLineEnd(i))) {
+                if (watchAfter(tokens, index, 2).every(i => helper.isLineEnd(i))) {
                     this.content.push(tokens[index])
                     // 如果字符串
                     return {
