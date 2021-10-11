@@ -133,6 +133,13 @@ function token(input = '') {
     return tokens
 }
 
+/**
+ * 向后看，知道满足某一个条件
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {(t: Token, offset: number, move: Function) => bool} fn
+ * @returns
+ */
 function watchAfterUtil(index, tokens, fn) {
     const matchTokens = []
     let offset = index
@@ -212,6 +219,9 @@ const helper = {
         return !token || token.type === TKS.LINE_END
     },
     isType(token, ...types) {
+        if (typeof token === 'string') {
+            return types.includes(token)
+        }
         return token && types.includes(token.type)
     },
     // 继续向后匹配表示
@@ -255,8 +265,8 @@ const helper = {
 
 /**
  * 解析行内元素
- * @param {*} index
- * @param {*} tokens
+ * @param {number} index
+ * @param {Token[]} tokens
  * @param {*} parentNode
  * @returns
  */
@@ -342,6 +352,11 @@ function toInlineNode(index, tokens, parentNode) {
     return index
 }
 
+/**
+ * 解析行内节点
+ * @param {Token[]} tokens
+ * @param {*} parentNode
+ */
 function parseInlineNodeLoop(tokens, parentNode) {
     let index = 0
     while(index < tokens.length) {
@@ -467,13 +482,14 @@ function toAST(tokens, defaultRoot) {
     return root
 }
 
+/** @typedef {(matchTokens: Token[], info: Object) => any } MatchHanlder  */
 
 /**
  * 匹配
  * @param {number} index
  * @param {Array} tokens
  * @param {Array} queue
- * @param {Function} handler
+ * @param {MatchHanlder} handler
  * @returns {boolean}
  */
 function matchUsefulTokens(index, tokens, queue, handler) {
@@ -534,8 +550,15 @@ function matchUsefulTokens(index, tokens, queue, handler) {
     return false
 }
 
+/**
+ * 解析图片
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isImg(index, tokens, handler) {
-    if (tokens[index].type !== TKS.IMG_START) {
+    if (!helper.isType(tokens[index], TKS.IMG_START)) {
         return false
     }
 
@@ -550,6 +573,13 @@ function isImg(index, tokens, handler) {
     return false
 }
 
+/**
+ * 解析url
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isUrl(index, tokens, handler) {
     // 如何完美结合起来
     const queue = [
@@ -557,14 +587,14 @@ function isUrl(index, tokens, handler) {
         {
             content: [],
             name: 'alt',
-            test: (type) => [TKS.URL_DESC_START, TKS.URL_DESC_END].includes(type) ? { offset: 0 } : helper.goOn,
+            test: (type) => helper.isType(type, TKS.URL_DESC_START, TKS.URL_DESC_END) ? { offset: 0 } : helper.goOn,
         },
         TKS.URL_DESC_END,
         TKS.URL_START,
         {
             content: [],
             name: 'src',
-            test: (type) => [TKS.URL_START, TKS.URL_END].includes(type) ? { offset: 0 } : helper.goOn,
+            test: (type) => helper.isType(type, TKS.URL_START, TKS.URL_END) ? { offset: 0 } : helper.goOn,
         },
         TKS.URL_END,
     ]
@@ -573,6 +603,13 @@ function isUrl(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析简单url <xxxxx>
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isSimpleUrl(index, tokens, handler) {
     const queue = [
         TKS.SIMPLE_URL_START,
@@ -580,7 +617,7 @@ function isSimpleUrl(index, tokens, handler) {
             content: [],
             name: 'src',
             test: (type) => {
-                if ([TKS.SIMPLE_URL_START, TKS.SIMPLE_URL_END, TKS.LINE_END, TKS.WHITE_SPACE].includes(type)) {
+                if (helper.isType(type, TKS.SIMPLE_URL_START, TKS.SIMPLE_URL_END, TKS.LINE_END, TKS.WHITE_SPACE)) {
                     return { offset: 0 }
                 }
 
@@ -593,10 +630,17 @@ function isSimpleUrl(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析行内code
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isInlineCode(index, tokens, handler) {
     // 不能是连续的``
     if (
-        tokens[index].type !== TKS.CODE_BLOCK
+        helper.isType(tokens[index], TKS.CODE_BLOCK)
         || helper.isType(tokens[index + 1], TKS.CODE_BLOCK)
     ) {
         return false
@@ -610,7 +654,7 @@ function isInlineCode(index, tokens, handler) {
             repeatable: true,
             ignore: true,
             test: (type) => {
-                if (type === TKS.CODE_BLOCK) {
+                if (helper.isType(type, TKS.CODE_BLOCK)) {
                     return {
                         offset: 1,
                     }
@@ -623,6 +667,13 @@ function isInlineCode(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析文本中划线
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isLineThrough(index, tokens, handler) {
     const queue = [
         TKS.LINE_THROUGH,
@@ -631,7 +682,7 @@ function isLineThrough(index, tokens, handler) {
             content: [],
             name: 'content',
             test(type, index, tokens) {
-                if ([tokens[index + 1], tokens[index + 2]].every(i => i && (i.type == TKS.LINE_THROUGH))) {
+                if ([tokens[index + 1], tokens[index + 2]].every(i => helper.isType(i, TKS.LINE_THROUGH))) {
                     this.content.push(tokens[index])
                     return {
                         offset: 1,
@@ -647,6 +698,13 @@ function isLineThrough(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析倾斜
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isItalic(index, tokens, handler) {
     const queue = [
         TKS.BLOB,
@@ -654,7 +712,7 @@ function isItalic(index, tokens, handler) {
             content: [],
             name: 'content',
             test(type, index, tokens) {
-                if ([tokens[index + 1]].every(i => i && (i.type == TKS.BLOB))) {
+                if ([tokens[index + 1]].every(i => helper.isType(i, TKS.BLOB))) {
                     this.content.push(tokens[index])
                     return {
                         offset: 1,
@@ -669,6 +727,13 @@ function isItalic(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析加粗
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isBlob(index, tokens, handler) {
     const queue = [
         TKS.BLOB,
@@ -677,7 +742,7 @@ function isBlob(index, tokens, handler) {
             content: [],
             name: 'content',
             test(type, index, tokens) {
-                if ([tokens[index + 1], tokens[index + 2]].every(i => i && (i.type == TKS.BLOB))) {
+                if ([tokens[index + 1], tokens[index + 2]].every(i => helper.isType(i, TKS.BLOB))) {
                     this.content.push(tokens[index])
                     return {
                         offset: 1,
@@ -693,6 +758,13 @@ function isBlob(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析标题
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isHead(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
@@ -707,7 +779,7 @@ function isHead(index, tokens, handler) {
             stop: false,
             test(type, index, tokens) {
                 const { matchTokens } = watchAfterUtil(index, tokens, (item) => {
-                    return item.type === TKS.HEAD_TITLE
+                    return helper.isType(item, TKS.HEAD_TITLE)
                 })
 
                 if (matchTokens.length > 6 || matchTokens.length === 0) {
@@ -740,6 +812,13 @@ function isHead(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析代码块
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isBlockCode(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
@@ -798,6 +877,13 @@ function isBlockCode(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析分割线
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isHr(index, tokens, handler) {
     // 实现一个简单的向前向后看的正则
     const queue = [
@@ -806,7 +892,7 @@ function isHr(index, tokens, handler) {
             name: 'hr',
             test(type, index, tokens) {
                 // 通过向前看，向后看以解析判断，是否命中Node节点
-                if (type === TKS.NO_ORDER_LIST) {
+                if (helper.isType(tokens[index], TKS.NO_ORDER_LIST)) {
                     const isMatch = helper.isLineStart(tokens, index)
                         && watchAfter(tokens, index, 3).every((item, at) => {
                             if (at === 2) {
@@ -825,6 +911,13 @@ function isHr(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析块级引用
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isBlockQuote(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
@@ -839,7 +932,8 @@ function isBlockQuote(index, tokens, handler) {
             ignore: true,
             test(type, index, tokens) {
                 // 这里暗含的意思是，这个if判断已经满足了是当前是end条件
-                if (tokens.slice(index, index + 3).every(i => helper.isLineEnd(i))) {
+                if (watchAfter(tokens, index, 2).every(i => helper.isLineEnd(i))) {
+                    this.content.push(tokens[index])
                     return {
                         offset: 2,
                     }
@@ -855,6 +949,13 @@ function isBlockQuote(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler)
 }
 
+/**
+ * 解析列表
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isList(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false
@@ -881,7 +982,7 @@ function isList(index, tokens, handler) {
                     nodeType: nodeType.li,
                     listStyleType: '',
                     test(type, index, tokens) {
-                        if ([TKS.NO_ORDER_LIST, TKS.ORDER_LIST].includes(type)) {
+                        if (helper.isType(type, TKS.NO_ORDER_LIST, TKS.ORDER_LIST)) {
                             this.content.push(tokens[index])
                             // 'disc', // 实心圆
                             // 'circle', // 空心圆
@@ -936,7 +1037,6 @@ function isList(index, tokens, handler) {
                     name: 'head',
                     test(type, index, tokens) {
                         // 暗含的意思
-
                         const result = helper.checkIsEnd(tokens, index)
                         if (result.match) {
                             // 需要解决立马遇到行尾的问题
@@ -1009,6 +1109,13 @@ function isList(index, tokens, handler) {
     return false
 }
 
+/**
+ * 解析表格
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
 function isTable(index, tokens, handler) {
     // 如果下一行的内容是  |----|----| 这种格式，则表示是table表格
     if (!helper.isLineStart(tokens, index)) {
@@ -1025,7 +1132,7 @@ function isTable(index, tokens, handler) {
                 if (type !== TKS.TABLE_SPLIT) {
                     if (this.children.length === 0) {
                         // 忽略行首的空格
-                        if (type === TKS.WHITE_SPACE) {
+                        if (helper.isType(type, TKS.WHITE_SPACE)) {
                             return helper.goOn
                         }
                         this.children.push([])
@@ -1067,7 +1174,7 @@ function isTable(index, tokens, handler) {
             children: [],
             test(type, index, tokens) {
                 // 不会存在连续的空格
-                if (![TKS.NO_ORDER_LIST, TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT].includes(type)) {
+                if (!helper.isType(type, TKS.NO_ORDER_LIST, TKS.WHITE_SPACE, TKS.LINE_END, TKS.TABLE_SPLIT)) {
                     this.stop = true
                     return false
                 }
@@ -1075,7 +1182,7 @@ function isTable(index, tokens, handler) {
                 if (type !== TKS.TABLE_SPLIT) {
                     if (this.children.length === 0) {
                         // 忽略行首的空格
-                        if (type === TKS.WHITE_SPACE) {
+                        if (helper.isType(type, TKS.WHITE_SPACE)) {
                             return helper.goOn
                         }
                         this.children.push([])
@@ -1120,13 +1227,13 @@ function isTable(index, tokens, handler) {
                     this.children.push([])
                 } else {
                     if (this.children.length === 0) {
-                        if (type === TKS.WHITE_SPACE) {
+                        if (helper.isType(type, TKS.WHITE_SPACE)) {
                             return helper.goOn
                         }
                         this.children.push([])
                     }
                     const lastRow = this.children[this.children.length - 1]
-                    if (type !== TKS.TABLE_SPLIT) {
+                    if (!helper.isType(type, TKS.TABLE_SPLIT)) {
                         if (lastRow.length === 0) {
                             lastRow.push([])
                         }
