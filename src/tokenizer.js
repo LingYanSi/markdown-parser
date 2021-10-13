@@ -453,11 +453,18 @@ function toAST(tokens, defaultRoot) {
             info.tbody_raw.children.forEach(item => {
                 const tbodyTr = createAstNode(nodeType.tr, info.tbody)
                 tbody.push(tbodyTr)
-                item.forEach(ele => {
-                    const td = createAstNode(nodeType.td, item)
+
+                info.thead_raw.children.forEach((_, index) => {
+                    const ele = item[index] || []
+                    const td = createAstNode(nodeType.td, ele)
                     parseInlineNodeLoop(ele, td)
                     tbodyTr.push(td)
                 })
+                // item.forEach(ele => {
+                //     const td = createAstNode(nodeType.td, item)
+                //     parseInlineNodeLoop(ele, td)
+                //     tbodyTr.push(td)
+                // })
             })
 
             node.push(tbody)
