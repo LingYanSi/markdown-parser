@@ -4,11 +4,7 @@ function _objectWithoutProperties(source, excluded) { if (source == null) return
 
 function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
 
@@ -17,6 +13,12 @@ function _nonIterableRest() { throw new TypeError("Invalid attempt to destructur
 function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
 
@@ -62,7 +64,9 @@ Object.defineProperty(exports, '__esModule', {
 function checkIsNoNeedDiff() {
   var key = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
   // __ 开头的未内部私有属性
-  return key.startsWith('__') || ['children', '$getNode', 'type', 'raw'].includes(key);
+  return key.startsWith('__') || ['children', '$getNode', 'type', 'raw', 'tokens', // 原始tokens信息
+  'push' // node节点上的push方法
+  ].includes(key);
 }
 /**
  * diff对象差异
@@ -320,836 +324,1412 @@ var nodeType = {
   li_done: 'li-done',
   li_todo: 'li-todo'
 };
-var Reg = {
-  // > 引用
-  get queto() {
-    return /^>(((?!\n\n)[\s\S])*)\n\n/;
-  },
+var TOKEN_TYPE = {
+  NO_ORDER_LIST: 'no_order_list',
+  // -
+  ORDER_LIST: 'order_list',
+  // +
+  SIMPLE_URL_START: 'simple_url_start',
+  // <
+  SIMPLE_URL_END: 'simple_url_end',
+  // >
+  URL_START: 'url_start',
+  // [
+  URL_END: 'url_end',
+  // ]
+  URL_DESC_START: 'url_desc_start',
+  // (
+  URL_DESC_END: 'url_desc_end',
+  // )
+  HEAD_TITLE: 'head_title',
+  // #
+  IMG_START: 'img_start',
+  // !
+  TABLE_SPLIT: 'table_split',
+  // |
+  CODE_BLOCK: 'code_block',
+  // `
+  WHITE_SPACE: 'white_space',
+  //
+  LINE_END: 'line_end',
+  // \n
+  LINE_THROUGH: 'linethrough',
+  // ~
+  BLOB: 'blob',
+  // *
+  STRING: 'string' // 非以上关键字符之外的连续字符
 
-  // # 标题
-  get head() {
-    return /^\s*(#{1,6})([^\n]*)\n?/;
-  },
+}; // @ts-check
+// TODO:
+// 递归迭代
+// 支持多字符串匹配，支持向前看，向后看
+// 性能优化，在解析content的时候，顺带解析节点信息，避免算法复杂度提升🤔
+// 如果当前节点信息类型不确认，是否存影响其后续token的解析规则呢？
 
-  // `行内code`
-  get inlineCode() {
-    return /^`([^`]*)`/;
-  },
+var Token = function Token(type, raw, start, end) {
+  _classCallCheck(this, Token);
 
-  get br() {
-    return /^\n/;
-  },
-
-  get text() {
-    return /^[^\n]*\n?/;
-  },
-
-  // --- 分割线
-  get hr() {
-    return /(^-{3,}\n|^-{3,}$)/;
-  },
-
-  // ~~中划线~~
-  get lineThrough() {
-    return /^~{2}(((?!~{2}).)*)~{2}/;
-  },
-
-  // *倾斜*
-  get italic() {
-    return /^\*(((?!\*).)*)\*/;
-  },
-
-  // **加粗**
-  get blod() {
-    // 正则意义 以某几个字符开始【中间不存在连续的字符】几个字符结束
-    return /^\*{2}(((?!\*{2}).)*)\*{2}/;
-  },
-
-  // !!![视频](url)
-  get video() {
-    return /^!{3}\[([^\]]*)\]\(([^)]+)\)/;
-  },
-
-  // !![音频](url)
-  get audio() {
-    return /^!{2}\[([^\]]*)\]\(([^)]+)\)/;
-  },
-
-  // ![图片](url)
-  get img() {
-    return /^!\[([^\]]*)\]\(([^)]+)\)/;
-  },
-
-  // [连接描述](url地址)
-  get url() {
-    return /^\[([^\]]+)\]\(([^)]+)\)/;
-  },
-
-  // 获取简单的url <https://xxx.ccc>
-  get simpleUrl() {
-    return /^<(https?:\/{2}[^<]+)>/;
-  }
-
+  this.type = type;
+  this.start = start;
+  this.end = end;
+  this.raw = raw;
 };
 
-function getNextLine(ss) {
-  var index = ss.indexOf('\n');
+var ASTNode = /*#__PURE__*/function () {
+  function ASTNode() {
+    var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    var tokens = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 
-  if (index > -1) {
-    return [ss.slice(0, index + 1), ss.slice(index + 1)];
+    _classCallCheck(this, ASTNode);
+
+    this.type = type;
+    this.tokens = tokens;
+    this.children = [];
+    this.value = '';
+  }
+  /**
+   * @param {ASTNode} child
+   * @returns
+   * @memberof ASTNode
+   */
+
+
+  _createClass(ASTNode, [{
+    key: "push",
+    value: function push(child) {
+      child.__parent = this;
+      this.children.push(child);
+      return this;
+    } // 可以把连续的text token合并成一个Text Node
+
+  }, {
+    key: "addToken",
+    value: function addToken(token) {
+      token && this.tokens.push(token); // 仅对于text node才有value属性
+
+      this.value = this.tokens.map(function (i) {
+        return i.raw;
+      }).join('');
+    }
+  }, {
+    key: "raw",
+    get: function get() {
+      return this.children.map(function (i) {
+        return i.tokens.map(function (i) {
+          return i.raw;
+        }).join('');
+      }).join('') || this.tokens.map(function (i) {
+        return i.raw;
+      }).join('');
+    }
+  }]);
+
+  return ASTNode;
+}();
+
+function createAstNode(type) {
+  var tokens = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+  var properties = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  var ast = new ASTNode(type, tokens);
+  Object.assign(ast, properties);
+
+  if (type === nodeType.text) {
+    ast.addToken();
   }
 
-  return [ss, ''];
+  return ast;
 }
 
-function parseBlockCode() {
-  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-  var callback = arguments.length > 1 ? arguments[1] : undefined;
+function token() {
+  var input = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
 
-  // 开始
-  var _ref = str.match(/^```([^\n]*)?/) || [],
-      _ref2 = _slicedToArray(_ref, 2),
-      startStr = _ref2[0],
-      language = _ref2[1];
+  /** @type {Token[]} */
+  var tokens = [];
+  var index = 0;
 
-  if (startStr && str[startStr.length] === '\n') {
-    var cursor = startStr.length;
-    var newStr = str.slice(startStr.length);
-    var line = '';
+  while (index < input.length) {
+    var char = input[index];
+    var offset = 1;
 
-    while (newStr) {
-      // 获取下一行
-      var _getNextLine = getNextLine(newStr);
+    switch (char) {
+      case '-':
+        {
+          tokens.push(new Token(TOKEN_TYPE.NO_ORDER_LIST, char, index, index + 1));
+          break;
+        }
 
-      var _getNextLine2 = _slicedToArray(_getNextLine, 2);
+      case '+':
+        {
+          tokens.push(new Token(TOKEN_TYPE.ORDER_LIST, char, index, index + 1));
+          break;
+        }
 
-      line = _getNextLine2[0];
-      newStr = _getNextLine2[1];
-      cursor += line.length; // 匹配到code ``` 结尾，或者已经到了字符串的行尾
+      case '<':
+        {
+          tokens.push(new Token(TOKEN_TYPE.SIMPLE_URL_START, char, index, index + 1));
+          break;
+        }
 
-      var isStrEnd = !newStr && !line;
+      case '>':
+        {
+          tokens.push(new Token(TOKEN_TYPE.SIMPLE_URL_END, char, index, index + 1));
+          break;
+        }
 
-      if (/^\s*```\s*$/.test(line) || isStrEnd) {
-        break;
-      }
+      case '(':
+        {
+          tokens.push(new Token(TOKEN_TYPE.URL_START, char, index, index + 1));
+          break;
+        }
+
+      case ')':
+        {
+          tokens.push(new Token(TOKEN_TYPE.URL_END, char, index, index + 1));
+          break;
+        }
+
+      case '[':
+        {
+          tokens.push(new Token(TOKEN_TYPE.URL_DESC_START, char, index, index + 1));
+          break;
+        }
+
+      case ']':
+        {
+          tokens.push(new Token(TOKEN_TYPE.URL_DESC_END, char, index, index + 1));
+          break;
+        }
+
+      case '#':
+        {
+          tokens.push(new Token(TOKEN_TYPE.HEAD_TITLE, char, index, index + 1));
+          break;
+        }
+
+      case '!':
+        {
+          tokens.push(new Token(TOKEN_TYPE.IMG_START, char, index, index + 1));
+          break;
+        }
+
+      case '|':
+        {
+          tokens.push(new Token(TOKEN_TYPE.TABLE_SPLIT, char, index, index + 1));
+          break;
+        }
+
+      case '`':
+        {
+          tokens.push(new Token(TOKEN_TYPE.CODE_BLOCK, char, index, index + 1));
+          break;
+        }
+
+      case '~':
+        {
+          tokens.push(new Token(TOKEN_TYPE.LINE_THROUGH, char, index, index + 1));
+          break;
+        }
+
+      case '*':
+        {
+          tokens.push(new Token(TOKEN_TYPE.BLOB, char, index, index + 1));
+          break;
+        }
+
+      case ' ':
+        {
+          var lastToken = tokens[tokens.length - 1];
+
+          if (lastToken && lastToken.type === TOKEN_TYPE.WHITE_SPACE) {
+            lastToken.raw += char;
+            lastToken.end += 1;
+          } else {
+            tokens.push(new Token(TOKEN_TYPE.WHITE_SPACE, char, index, index + 1));
+          }
+
+          break;
+        }
+
+      case '\n':
+        {
+          tokens.push(new Token(TOKEN_TYPE.LINE_END, char, index, index + 1));
+          break;
+        }
+
+      default:
+        {
+          // 向后看一位
+          var nextChar = input[index + 1];
+          var str = ''; // 处理转译字符\，避免关键char不能够正常显示
+
+          var _ref = char === '\\' && nextChar ? [nextChar, 2] : [char, 1];
+
+          var _ref2 = _slicedToArray(_ref, 2);
+
+          str = _ref2[0];
+          offset = _ref2[1];
+          var _lastToken = tokens[tokens.length - 1];
+
+          if (_lastToken && _lastToken.type === TOKEN_TYPE.STRING) {
+            _lastToken.raw += str;
+            _lastToken.end += offset;
+          } else {
+            tokens.push(new Token(TOKEN_TYPE.STRING, str, index, index + offset));
+          }
+        }
     }
 
-    var result = {
-      raw: str.slice(0, cursor),
-      language: language,
-      content: str.slice(startStr.length + 1, cursor - line.length),
-      endIndex: cursor
-    };
-    callback(result);
-    return result;
+    index += offset;
   }
 
-  return null;
-}
-
-function treeShake() {
-  var lineStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-  return lineStr.split('|').filter(function (i, index, arr) {
-    return index === 0 || index === arr.length - 1 ? i.trim() : i;
-  }).map(function (i) {
-    return i.replace(/\s+$/g, '');
-  });
+  return tokens;
 }
 /**
- * 解析table
- * @export
- * @param {string} [str='']
- * @param {function} callback
+ * 向后看，知道满足某一个条件
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {(t: Token, offset: number, move: Function) => bool} fn
  * @returns
  */
 
 
-function parseTable() {
-  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-  var callback = arguments.length > 1 ? arguments[1] : undefined;
-  var strCache = str;
-  var head = '';
-  var splitLine = '';
-  var index = 0;
+function watchAfterUtil(index, tokens, fn) {
+  var matchTokens = [];
+  var offset = index;
 
-  var _getNextLine3 = getNextLine(str);
-
-  var _getNextLine4 = _slicedToArray(_getNextLine3, 2);
-
-  head = _getNextLine4[0];
-  str = _getNextLine4[1];
-
-  var _getNextLine5 = getNextLine(str);
-
-  var _getNextLine6 = _slicedToArray(_getNextLine5, 2);
-
-  splitLine = _getNextLine6[0];
-  str = _getNextLine6[1];
-  index += splitLine.length + head.length;
-  head = treeShake(head);
-  splitLine = treeShake(splitLine);
-
-  if (splitLine.length >= 2 && head.length) {
-    var table = {
-      head: head,
-      body: []
-    };
-    var line = '';
-
-    while (str) {
-      var _getNextLine7 = getNextLine(str);
-
-      var _getNextLine8 = _slicedToArray(_getNextLine7, 2);
-
-      line = _getNextLine8[0];
-      str = _getNextLine8[1];
-
-      if (/^\s+$/.test(line)) {
-        index += line.length;
-        break;
-      } else {
-        // 如果遇到其他块级元素则应该结束循环？
-        //
-        index += line.length;
-        table.body.push(treeShake(line));
-      }
-    } // table的head和body长度对齐，避免table渲染出大片空白，或者最后一列没有值的时候不渲染的问题
-
-
-    var tableRowLen = Math.max.apply(Math, [head.length].concat(_toConsumableArray(table.body.map(function (i) {
-      return i.length;
-    }))));
-    [head].concat(_toConsumableArray(table.body)).forEach(function (item) {
-      // 借助数组引用类型，修改数组长度
-      item.push.apply(item, _toConsumableArray(Array.from({
-        length: tableRowLen - item.length
-      }).fill('')));
-    });
-    var result = {
-      raw: strCache.slice(0, index),
-      table: table,
-      endIndex: index
-    };
-    callback(result);
-    return result;
-  }
-
-  return null;
-} // - 一般list
-// - [x] todoList，两者都归于list类型
-
-
-var listReg = /^(\s*)([-+])(\s\[[\sx]?\])?/;
-/**
- * 父组件一路向上查询，只关心父节点，不关心兄弟节点
- */
-
-function sortUl(ul) {
-  var SPACE_PER = 4;
-
-  var newUl = _objectSpread(_objectSpread({}, ul), {}, {
-    ident: -1,
-    deep: 0,
-    children: []
-  });
-
-  var currentNode = newUl;
-
-  var findParent = function findParent(ident) {
-    var node = currentNode;
-
-    while (node) {
-      if (node.ident < ident) {
-        return node.ul || node;
-      }
-
-      node = node._parent;
-    }
-
-    return null;
+  var moveIndex = function moveIndex(offsetNum) {
+    offset += offsetNum;
+    return [tokens[offset], offset];
   };
 
-  ul.children.forEach(function (item) {
-    var _item$raw$match = item.raw.match(listReg),
-        _item$raw$match2 = _slicedToArray(_item$raw$match, 2),
-        space = _item$raw$match2[1];
+  while (offset < tokens.length) {
+    var item = tokens[offset]; // 如果匹配成功，会向后加+1
 
-    var ident = Math.floor(space.length / SPACE_PER); // ident 如果<= 当前的ident，那就需要向上切换
-    // 如果比当前的ident大的话，就变成当前的子元素，并把current Node更改到
-    // 如果是一个li，要添加子li，应当再创建一个ul
-
-    item.ident = ident;
-    item.ul = {
-      // li可能会嵌套列表
-      type: nodeType.ul,
-      children: []
-    };
-    var parent = findParent(ident);
-
-    if (parent) {
-      // deep自增，需要更新到ul
-      item.deep = parent.deep + 1;
-      item.ul && (item.ul.deep = item.deep);
-      item._parent = currentNode;
-      currentNode = item;
-      parent.children.push(item);
-    }
-  });
-  return newUl;
-}
-
-function parseUL() {
-  var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-  var callback = arguments.length > 1 ? arguments[1] : undefined;
-  var strCache = str; // 如果遇到了空行则结束，否则都按照
-
-  if (!listReg.test(str)) return;
-  var index = 0;
-  var line = '';
-  var ul = {
-    type: nodeType.ul,
-    children: []
-  };
-
-  while (str) {
-    var _getNextLine9 = getNextLine(str);
-
-    var _getNextLine10 = _slicedToArray(_getNextLine9, 2);
-
-    line = _getNextLine10[0];
-    str = _getNextLine10[1];
-    index += line.length; // 遇到空行则跳出
-
-    if (!line.trim()) {
+    if (!fn(item, offset, moveIndex)) {
       break;
-    }
-
-    var matchResult = line.match(listReg);
-
-    if (matchResult) {
-      // eslint-disable-next-line no-unused-vars
-      var _matchResult = _slicedToArray(matchResult, 4),
-          prevStr = _matchResult[0],
-          space = _matchResult[1],
-          char = _matchResult[2],
-          todoStr = _matchResult[3];
-
-      var child = line.slice(prevStr.length);
-      var todoType = nodeType.li;
-
-      if (todoStr) {
-        todoType = todoStr.indexOf('x') > -1 ? nodeType.li_done : nodeType.li_todo;
-      } // 判断类型是不是todo
-
-
-      ul.children.push({
-        type: todoType,
-        char: char,
-        raw: line,
-        children: [child]
-      });
     } else {
-      ul.children[ul.children.length - 1].children.push(line);
+      matchTokens.push(item);
     }
+
+    offset += 1;
   }
 
-  var result = {
-    raw: strCache.slice(0, index),
-    list: sortUl(ul)
+  return {
+    matchTokens: matchTokens,
+    nextToken: tokens[offset]
   };
-  callback(result);
-  return result;
 }
-
-function parseQuote(str, callback) {
-  // 判断是不是以 < 开头，以遇到一个换行结束
-  if (str[0] !== '>') return;
-  var strCache = str;
-  var index = 0;
-  var line = '';
-
-  while (str) {
-    var _getNextLine11 = getNextLine(str);
-
-    var _getNextLine12 = _slicedToArray(_getNextLine11, 2);
-
-    line = _getNextLine12[0];
-    str = _getNextLine12[1];
-    index += line.length; // 使用两个换行作为结束符
-
-    var _getNextLine13 = getNextLine(str),
-        _getNextLine14 = _slicedToArray(_getNextLine13, 1),
-        nextline = _getNextLine14[0];
-
-    if (!line.trim() && !nextline.trim()) {
-      break;
-    }
-  }
-
-  var result = {
-    raw: strCache.slice(0, index),
-    content: strCache.slice(1, index)
-  };
-  callback(result);
-  return result;
-}
-/*
- * 1. 关键字 \n# \n- \n+ \n ```language ```
- * queto: \n> \n\n结束
- * markdown 没有嵌套
- * 逐字匹配，除了img/url/code/text/外需要对数据进行循环解析，直到解析到这四种基础格式位置
- * 行内关键字包括 *** ** ![]() []()
- * 对于table的支持
- * \n|--|--|--|
- * 如果不以 #{1,6} - > ``` 开头表明就是字符串
- * 简单的东西，当然可以正则搞定
- * 但目前来看markdown还是需要做一点语法分析的
+/**
+ * 向后看几个token，以判断是否符合预期
+ * @param {Token[]} tokens
+ * @param {number} offset 当前index
+ * @param {number} [length=1] 需要后续几个token
+ * @returns
  */
 
-/** @typedef {import("./../@type/index").AST} AST */
-// 向node节点上添加元数据
+
+function watchAfter(tokens, offset) {
+  var length = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+  // 使用for循环替代slice，因为slice不会严格返回指定长度的数组
+  var sliceTK = [];
+
+  for (var index = offset + 1; index < offset + length + 1; index++) {
+    sliceTK.push(tokens[index]);
+  }
+
+  return sliceTK;
+}
+
+var helper = {
+  // 判断当前token是不是行尾，或者文本结束
+  isLineEnd: function isLineEnd(token) {
+    return !token || token.type === TOKEN_TYPE.LINE_END;
+  },
+  checkIsEnd: function checkIsEnd(tokens, index) {
+    var _ref3 = [tokens[index], tokens[index + 1]],
+        currentToken = _ref3[0],
+        nextToken = _ref3[1];
+
+    if (!currentToken) {
+      return {
+        match: []
+      };
+    } else if (currentToken.type === TOKEN_TYPE.LINE_END) {
+      return {
+        match: [currentToken]
+      };
+    }
+
+    if (!nextToken) {
+      return {
+        match: [currentToken]
+      };
+    }
+
+    return {};
+  },
+  // 判断下一个字符是不是行尾
+  nextIsLienEnd: function nextIsLienEnd(tokens, index) {
+    var token = tokens[index + 1];
+    return token && token.type === TOKEN_TYPE.LINE_END;
+  },
+  // 判断index的前一个字符是不是行首
+  isLineStart: function isLineStart(tokens, index) {
+    var token = tokens[index - 1];
+    return !token || token.type === TOKEN_TYPE.LINE_END;
+  },
+  isType: function isType(token) {
+    for (var _len = arguments.length, types = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      types[_key - 1] = arguments[_key];
+    }
+
+    if (typeof token === 'string') {
+      return types.includes(token);
+    }
+
+    return token && types.includes(token.type);
+  },
+  // 继续向后匹配表示
+  goOn: {
+    matchEnd: false
+  },
+  // 判断是否可以继续向后匹配
+  isCanGoOn: function isCanGoOn(r) {
+    return this.goOn === r;
+  },
+  // tokens转字符串
+  tokensToString: function tokensToString(tokens) {
+    return tokens.map(function (i) {
+      return i.raw;
+    }).join('');
+  },
+  getQueueContent: function getQueueContent() {
+    var queue = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var info = {};
+    queue.forEach(function (i) {
+      if (i.content) {
+        info[i.name] = i.content;
+        info[i.name + '_raw'] = i;
+      }
+    });
+    return info;
+  },
+  getIdentMatcher: function getIdentMatcher() {
+    return {
+      content: [],
+      name: 'ident',
+      test: function test(type) {
+        if (type !== TOKEN_TYPE.WHITE_SPACE) {
+          return {
+            offset: 0
+          };
+        }
+
+        return helper.goOn;
+      }
+    };
+  }
+};
+/**
+ * 解析行内元素
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {ASTNode} parentNode
+ * @returns
+ */
+
+function toInlineNode(index, tokens, parentNode) {
+  var token = tokens[index];
+
+  if (parseImg(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.img, matchTokens);
+    node.src = helper.tokensToString(info.src);
+    node.alt = helper.tokensToString(info.alt);
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  if (parseUrl(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.url, matchTokens, {
+      href: helper.tokensToString(info.src)
+    });
+    node.push(createAstNode(nodeType.text, info.alt));
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  if (parseInlineCode(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.inlineCode, matchTokens);
+    node.push(createAstNode(nodeType.text, info.code));
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  if (parseSimpleUrl(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.url, matchTokens, {
+      href: helper.tokensToString(info.src)
+    });
+    node.push(createAstNode(nodeType.text, info.src));
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  if (parseLineThrough(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.linethrough, matchTokens);
+    parseInlineNodeLoop(info.content, node);
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  if (parseBlob(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.blod, matchTokens);
+    parseInlineNodeLoop(info.content, node);
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  if (parseItalic(index, tokens, function (matchTokens, info) {
+    var node = createAstNode(nodeType.italic, matchTokens);
+    parseInlineNodeLoop(info.content, node);
+    parentNode.push(node);
+    index += matchTokens.length;
+  })) {
+    return index;
+  }
+
+  var lastMnode = parentNode.children[parentNode.children.length - 1];
+
+  if (lastMnode && lastMnode.type === nodeType.text) {
+    lastMnode.addToken(token);
+  } else {
+    parentNode.push(createAstNode(nodeType.text, [token]));
+  }
+
+  index += 1;
+  return index;
+}
+/**
+ * 解析行内节点
+ * @param {Token[]} tokens
+ * @param {ASTNode} parentNode
+ */
+
+
+function parseInlineNodeLoop(tokens, parentNode) {
+  var index = 0;
+
+  while (index < tokens.length) {
+    index = toInlineNode(index, tokens, parentNode);
+  }
+}
+/**
+ * 如果想递归分析，那就需要把start/end携带上，这样就不用不停的分配新数组了
+ * 把token转换为Node
+ * @param {Token[]} tokens
+ */
+
+
+function toAST(tokens, defaultRoot) {
+  var root = defaultRoot || createAstNode(nodeType.root, tokens);
+  var index = 0;
+
+  while (index < tokens.length) {
+    var _token = tokens[index];
+
+    if (!_token) {
+      break;
+    } // 是不是行首
+    // parse head
+
+
+    if (_token.type === TOKEN_TYPE.LINE_END) {
+      root.push(createAstNode(nodeType.br, [_token]));
+      index += 1;
+      continue;
+    }
+
+    if (parseHead(index, tokens, function (matchTokens, info) {
+      var node = createAstNode(nodeType['h' + info.headLevel.length], matchTokens);
+      parseInlineNodeLoop(info.children, node);
+      root.push(node);
+      index += matchTokens.length;
+    })) {
+      continue;
+    }
+
+    if (parseBlockCode(index, tokens, function (matchTokens, info) {
+      var node = createAstNode(nodeType.code, matchTokens, {
+        code: helper.tokensToString(info.code),
+        language: helper.tokensToString(info.language).trim()
+      });
+      root.push(node);
+      index += matchTokens.length;
+    })) {
+      continue;
+    }
+
+    if (parseBlockQuote(index, tokens, function (matchTokens, info) {
+      var node = createAstNode(nodeType.queto, matchTokens);
+      toAST(info.children, node);
+      root.push(node);
+      index += matchTokens.length;
+    })) {
+      continue;
+    }
+
+    if (parseTable(index, tokens, function (matchTokens, info) {
+      var node = createAstNode(nodeType.table, matchTokens);
+      var thead = createAstNode(nodeType.thead, info.thead);
+      var theadTr = createAstNode(nodeType.tr, info.thead);
+      thead.push(theadTr);
+      info.thead_raw.children.forEach(function (item) {
+        var th = createAstNode(nodeType.th, item);
+        parseInlineNodeLoop(item, th);
+        theadTr.push(th);
+      });
+      node.push(thead);
+      var tbody = createAstNode(nodeType.tbody, info.tbody);
+      info.tbody_raw.children.forEach(function (item) {
+        var tbodyTr = createAstNode(nodeType.tr, info.tbody);
+        tbody.push(tbodyTr);
+        info.thead_raw.children.forEach(function (_, index) {
+          var ele = item[index] || [];
+          var td = createAstNode(nodeType.td, ele);
+          parseInlineNodeLoop(ele, td);
+          tbodyTr.push(td);
+        }); // item.forEach(ele => {
+        //     const td = createAstNode(nodeType.td, item)
+        //     parseInlineNodeLoop(ele, td)
+        //     tbodyTr.push(td)
+        // })
+      });
+      node.push(tbody);
+      root.push(node);
+      index += matchTokens.length;
+    })) {
+      continue;
+    }
+
+    if (parseHr(index, tokens, function (matchTokens) {
+      var node = createAstNode(nodeType.hr, matchTokens);
+      root.push(node);
+      index += matchTokens.length;
+    })) {
+      continue;
+    }
+
+    if (parseList(index, tokens, function (matchTokens, info) {
+      var node = createAstNode(nodeType.ul, matchTokens);
+      node.listStyleType = info[0].listStyleType;
+      info.forEach(function (item) {
+        var liNode = createAstNode(item.nodeType || nodeType.li);
+        parseInlineNodeLoop(item.head, liNode);
+        item.children.forEach(function (ele) {
+          parseInlineNodeLoop(ele.content, liNode);
+        });
+        node.push(liNode);
+      });
+      root.push(node);
+      index += matchTokens.length;
+    })) {
+      continue;
+    }
+
+    index = toInlineNode(index, tokens, root);
+  }
+
+  return root;
+}
+/** @typedef {(matchTokens: Token[], info: Object) => any } MatchHanlder  */
 
 /**
- * [parser 获取AST]
- * @method parser
- * @param  {String} [str=''] [description]
- * @return {AST}          [ast tree]
+ * 匹配
+ * @param {number} index
+ * @param {Array} tokens
+ * @param {Array} queue
+ * @param {MatchHanlder} handler
+ * @returns {boolean}
  */
 
+
+function matchUsefulTokens(index, tokens, queue, handler) {
+  var matchTokens = [];
+  var queueTypeIndex = 0;
+  watchAfterUtil(index, tokens, function (item, currentIndex, moveIndex) {
+    while (true) {
+      if (_typeof(queue[queueTypeIndex]) === 'object') {
+        // offset的偏移 + index大于tokens长度时，item不存在了
+        if (!item) {
+          break;
+        }
+
+        var testResult = queue[queueTypeIndex].test(item.type, currentIndex, tokens);
+
+        if (helper.isCanGoOn(testResult)) {
+          queue[queueTypeIndex].content.push(item);
+          matchTokens.push(item);
+          return true;
+        } // 终止向下解析
+
+
+        if (!testResult || queue[queueTypeIndex].stop) {
+          return false;
+        } // 移动index
+
+
+        if (testResult.offset > 0) {
+          matchTokens.push.apply(matchTokens, _toConsumableArray(tokens.slice(currentIndex, currentIndex + testResult.offset))); // 根据offset去矫正偏移量
+
+          var _moveIndex = moveIndex(testResult.offset);
+
+          var _moveIndex2 = _slicedToArray(_moveIndex, 2);
+
+          item = _moveIndex2[0];
+          currentIndex = _moveIndex2[1];
+        } // TODO: 当offset大于0的时候需要记录指定的节点比如 结束标签```
+
+
+        queueTypeIndex += 1; // 继续从头循环
+
+        continue;
+      } // 这里在假设下一个type一定不是一个Object
+
+
+      if (queue[queueTypeIndex] && item.type === queue[queueTypeIndex]) {
+        queueTypeIndex += 1;
+        matchTokens.push(item); // 直到所有的都匹配到
+
+        return queueTypeIndex !== queue.length;
+      }
+
+      return false;
+    }
+  }); // 没有停止解析的
+
+  if (queueTypeIndex === queue.length && queue.every(function (i) {
+    return !i.stop;
+  })) {
+    handler(matchTokens, helper.getQueueContent(queue));
+    return true;
+  }
+
+  return false;
+}
+/**
+ * 解析图片
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseImg(index, tokens, handler) {
+  if (!helper.isType(tokens[index], TOKEN_TYPE.IMG_START)) {
+    return false;
+  }
+
+  var matchTokens = [tokens[index]];
+
+  if (parseUrl(index + 1, tokens, function (urlMatchTokens, info) {
+    handler(matchTokens.concat(urlMatchTokens), info);
+  })) {
+    return true;
+  }
+
+  return false;
+}
+/**
+ * 解析url
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseUrl(index, tokens, handler) {
+  // 如何完美结合起来
+  var queue = [TOKEN_TYPE.URL_DESC_START, {
+    content: [],
+    name: 'alt',
+    test: function test(type) {
+      return helper.isType(type, TOKEN_TYPE.URL_DESC_START, TOKEN_TYPE.URL_DESC_END) ? {
+        offset: 0
+      } : helper.goOn;
+    }
+  }, TOKEN_TYPE.URL_DESC_END, TOKEN_TYPE.URL_START, {
+    content: [],
+    name: 'src',
+    test: function test(type) {
+      return helper.isType(type, TOKEN_TYPE.URL_START, TOKEN_TYPE.URL_END) ? {
+        offset: 0
+      } : helper.goOn;
+    }
+  }, TOKEN_TYPE.URL_END]; // 在这里存储匹配到的结果，然后对，某些可递归元素继续解析 比如 [can parse content]()
+
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析简单url <xxxxx>
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseSimpleUrl(index, tokens, handler) {
+  var queue = [TOKEN_TYPE.SIMPLE_URL_START, {
+    content: [],
+    name: 'src',
+    test: function test(type) {
+      if (helper.isType(type, TOKEN_TYPE.SIMPLE_URL_START, TOKEN_TYPE.SIMPLE_URL_END, TOKEN_TYPE.LINE_END, TOKEN_TYPE.WHITE_SPACE)) {
+        return {
+          offset: 0
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, TOKEN_TYPE.SIMPLE_URL_END];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析行内code
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseInlineCode(index, tokens, handler) {
+  // 不能是连续的``
+  if (helper.isType(tokens[index], TOKEN_TYPE.CODE_BLOCK) && helper.isType(tokens[index + 1], TOKEN_TYPE.CODE_BLOCK)) {
+    return false;
+  }
+
+  var queue = [TOKEN_TYPE.CODE_BLOCK, {
+    content: [],
+    name: 'code',
+    repeatable: true,
+    ignore: true,
+    test: function test(type) {
+      if (helper.isType(type, TOKEN_TYPE.CODE_BLOCK)) {
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析文本中划线
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseLineThrough(index, tokens, handler) {
+  var queue = [TOKEN_TYPE.LINE_THROUGH, TOKEN_TYPE.LINE_THROUGH, {
+    content: [],
+    name: 'content',
+    test: function test(type, index, tokens) {
+      if ([tokens[index + 1], tokens[index + 2]].every(function (i) {
+        return helper.isType(i, TOKEN_TYPE.LINE_THROUGH);
+      })) {
+        this.content.push(tokens[index]);
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, TOKEN_TYPE.LINE_THROUGH, TOKEN_TYPE.LINE_THROUGH];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析倾斜
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseItalic(index, tokens, handler) {
+  var queue = [TOKEN_TYPE.BLOB, {
+    content: [],
+    name: 'content',
+    test: function test(type, index, tokens) {
+      if ([tokens[index + 1]].every(function (i) {
+        return helper.isType(i, TOKEN_TYPE.BLOB);
+      })) {
+        this.content.push(tokens[index]);
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, TOKEN_TYPE.BLOB];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析加粗
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseBlob(index, tokens, handler) {
+  var queue = [TOKEN_TYPE.BLOB, TOKEN_TYPE.BLOB, {
+    content: [],
+    name: 'content',
+    test: function test(type, index, tokens) {
+      if ([tokens[index + 1], tokens[index + 2]].every(function (i) {
+        return helper.isType(i, TOKEN_TYPE.BLOB);
+      })) {
+        this.content.push(tokens[index]);
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, TOKEN_TYPE.BLOB, TOKEN_TYPE.BLOB];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析标题
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseHead(index, tokens, handler) {
+  if (!helper.isLineStart(tokens, index)) {
+    return false;
+  } // 实现一个简单的向前向后看的正则
+
+
+  var queue = [helper.getIdentMatcher(), {
+    content: [],
+    name: 'headLevel',
+    stop: false,
+    test: function test(type, index, tokens) {
+      var _watchAfterUtil = watchAfterUtil(index, tokens, function (item) {
+        return helper.isType(item, TOKEN_TYPE.HEAD_TITLE);
+      }),
+          matchTokens = _watchAfterUtil.matchTokens;
+
+      if (matchTokens.length > 6 || matchTokens.length === 0) {
+        this.stop = true;
+        return false;
+      }
+
+      this.content = matchTokens; // 通过向前看，向后看以解析判断，是否命中Node节点
+
+      return {
+        offset: matchTokens.length
+      };
+    }
+  }, {
+    content: [],
+    name: 'children',
+    repeatable: true,
+    ignore: true,
+    test: function test(type, index, tokens) {
+      // 通过向前看，向后看以解析判断，是否命中Node节点
+      if (helper.isLineEnd(tokens[index])) {
+        return {
+          offset: 1
+        }; // 忽略尾部\n
+      }
+
+      return helper.goOn;
+    }
+  }];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析代码块
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseBlockCode(index, tokens, handler) {
+  if (!helper.isLineStart(tokens, index)) {
+    return false;
+  } // 实现一个简单的向前向后看的正则
+
+
+  var queue = [TOKEN_TYPE.CODE_BLOCK, TOKEN_TYPE.CODE_BLOCK, TOKEN_TYPE.CODE_BLOCK, {
+    content: [],
+    name: 'language',
+    test: function test(type, index, tokens) {
+      // 保留换行符
+      if (helper.isLineEnd(tokens[index])) {
+        this.content.push(tokens[index]);
+        return {
+          offset: 1
+        };
+      } else if (helper.nextIsLienEnd(tokens, index)) {
+        this.content.push(tokens[index], tokens[index + 1]); // debugger
+
+        return {
+          offset: 2
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, {
+    content: [],
+    name: 'code',
+    test: function test(type, index, tokens) {
+      // 通过向前看，向后看以解析判断，是否命中Node节点
+      if (type === TOKEN_TYPE.CODE_BLOCK) {
+        return helper.isLineStart(tokens, index) && watchAfter(tokens, index, 3).every(function (item, at) {
+          if (at === 2) {
+            return helper.isLineEnd(item);
+          }
+
+          return helper.isType(item, TOKEN_TYPE.CODE_BLOCK);
+        }) ? {
+          offset: 3
+        } : helper.goOn;
+      }
+
+      return helper.goOn;
+    }
+  }];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析分割线
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseHr(index, tokens, handler) {
+  // 实现一个简单的向前向后看的正则
+  var queue = [{
+    content: [],
+    name: 'hr',
+    test: function test(type, index, tokens) {
+      // 通过向前看，向后看以解析判断，是否命中Node节点
+      if (helper.isType(tokens[index], TOKEN_TYPE.NO_ORDER_LIST)) {
+        var isMatch = helper.isLineStart(tokens, index) && watchAfter(tokens, index, 3).every(function (item, at) {
+          if (at === 2) {
+            return helper.isLineEnd(item);
+          }
+
+          return helper.isType(item, TOKEN_TYPE.NO_ORDER_LIST);
+        });
+        return isMatch ? {
+          offset: 3
+        } : false;
+      }
+
+      return false;
+    }
+  }];
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析块级引用
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseBlockQuote(index, tokens, handler) {
+  if (!helper.isLineStart(tokens, index)) {
+    return false;
+  } // 实现一个简单的向前向后看的正则
+
+
+  var queue = [TOKEN_TYPE.SIMPLE_URL_END, {
+    content: [],
+    name: 'children',
+    repeatable: true,
+    ignore: true,
+    test: function test(type, index, tokens) {
+      // 这里暗含的意思是，这个if判断已经满足了是当前是end条件
+      if (watchAfter(tokens, index, 2).every(function (i) {
+        return helper.isLineEnd(i);
+      })) {
+        this.content.push(tokens[index]);
+        return {
+          offset: 2
+        };
+      }
+
+      return helper.goOn;
+    }
+  }]; // 需要一个描述符号 \n{0,2}$
+
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
+/**
+ * 解析列表
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseList(index, tokens, handler) {
+  if (!helper.isLineStart(tokens, index)) {
+    return false;
+  }
+
+  var mtks = [];
+  var liList = []; // 先获取ident，然后判断是不是 - / +
+  // 如果不是，就向前一个对象的children push
+  // 如果是就新增一个对象
+
+  while (true) {
+    // 遇到两个换行结束遍历
+    if (tokens.slice(index, index + 2).every(function (i) {
+      return helper.isLineEnd(i);
+    })) {
+      break;
+    }
+
+    if (matchUsefulTokens(index, tokens, [helper.getIdentMatcher(), {
+      content: [],
+      name: 'listType',
+      nodeType: nodeType.li,
+      listStyleType: '',
+      test: function test(type, index, tokens) {
+        if (helper.isType(type, TOKEN_TYPE.NO_ORDER_LIST, TOKEN_TYPE.ORDER_LIST)) {
+          this.content.push(tokens[index]); // 'disc', // 实心圆
+          // 'circle', // 空心圆
+          // 'square', // 方块
+
+          this.listStyleType = type === TOKEN_TYPE.NO_ORDER_LIST ? 'disc' : 'decimal';
+          var todoType = '';
+          var isMatchTodo = watchAfter(tokens, index, 5).every(function (i, index) {
+            switch (index) {
+              case 0:
+                return helper.isType(i, TOKEN_TYPE.WHITE_SPACE);
+
+              case 1:
+                return helper.isType(i, TOKEN_TYPE.URL_DESC_START);
+
+              case 2:
+                {
+                  if (helper.isType(i, TOKEN_TYPE.WHITE_SPACE)) {
+                    todoType = nodeType.li_todo;
+                    return true;
+                  }
+
+                  if (helper.isType(i, TOKEN_TYPE.STRING) && i.raw === 'x') {
+                    todoType = nodeType.li_done;
+                    return true;
+                  }
+
+                  return false;
+                }
+
+              case 3:
+                return helper.isType(i, TOKEN_TYPE.URL_DESC_END);
+
+              case 4:
+                return helper.isType(i, TOKEN_TYPE.WHITE_SPACE) || helper.isLineEnd(i);
+            }
+          });
+
+          if (isMatchTodo) {
+            var _this$content;
+
+            (_this$content = this.content).push.apply(_this$content, _toConsumableArray(watchAfter(tokens, index, 4)));
+
+            this.nodeType = todoType;
+            return {
+              offset: 5
+            };
+          }
+
+          return {
+            offset: 1 // TODO:忽略结尾token，但其实应当添加到info上
+
+          };
+        }
+
+        return false;
+      }
+    }, {
+      content: [],
+      name: 'head',
+      test: function test(type, index, tokens) {
+        // 暗含的意思
+        var result = helper.checkIsEnd(tokens, index);
+
+        if (result.match) {
+          var _this$content2;
+
+          // 需要解决立马遇到行尾的问题
+          (_this$content2 = this.content).push.apply(_this$content2, _toConsumableArray(result.match));
+
+          return {
+            offset: result.match.length // TODO:忽略结尾token，但其实应当添加到info上
+
+          };
+        }
+
+        return helper.goOn;
+      }
+    }], function (mts, info) {
+      index += mts.length;
+      mtks.push.apply(mtks, _toConsumableArray(mts));
+      liList.push({
+        ident: info.ident,
+        head: info.head,
+        listStyleType: info.listType_raw.listStyleType,
+        nodeType: info.listType_raw.nodeType,
+        children: [],
+        tokens: mts
+      });
+    })) {
+      continue;
+    }
+
+    if (liList.length === 0) {
+      return;
+    }
+
+    if (matchUsefulTokens(index, tokens, [{
+      content: [],
+      name: 'content',
+      test: function test(type, index, tokens) {
+        if (helper.isLineEnd(tokens[index])) {
+          // 需要解决立马遇到行尾的问题
+          this.content.push(tokens[index]);
+          return {
+            offset: 1 // TODO:忽略结尾token，但其实应当添加到info上
+
+          };
+        }
+
+        return helper.goOn;
+      }
+    }], function (mts, info) {
+      index += mts.length;
+      mtks.push.apply(mtks, _toConsumableArray(mts));
+      liList[liList.length - 1].children.push({
+        type: 'normal',
+        content: info.content,
+        tokens: mts
+      });
+    })) {
+      continue;
+    }
+
+    break;
+  }
+
+  if (liList.length !== 0) {
+    handler(mtks, liList);
+    return true;
+  }
+
+  return false;
+}
+/**
+ * 解析表格
+ * @param {number} index
+ * @param {Token[]} tokens
+ * @param {MatchHanlder} handler
+ * @returns
+ */
+
+
+function parseTable(index, tokens, handler) {
+  // 如果下一行的内容是  |----|----| 这种格式，则表示是table表格
+  if (!helper.isLineStart(tokens, index)) {
+    return false;
+  } // 实现一个简单的向前向后看的正则
+
+
+  var queue = [{
+    content: [],
+    children: [],
+    name: 'thead',
+    test: function test(type, index, tokens) {
+      // 期望字符
+      if (type !== TOKEN_TYPE.TABLE_SPLIT) {
+        if (this.children.length === 0) {
+          // 忽略行首的空格
+          if (helper.isType(type, TOKEN_TYPE.WHITE_SPACE)) {
+            return helper.goOn;
+          }
+
+          this.children.push([]);
+        } // 需要时连续的 - ， --之间不能有空格
+
+
+        this.children[this.children.length - 1].push(tokens[index]);
+      } else if (type === TOKEN_TYPE.TABLE_SPLIT) {
+        // 下一个是有效字符
+        // 第一个是空格 第二个是有效字符
+        if (!helper.isType(tokens[index + 1], TOKEN_TYPE.WHITE_SPACE, TOKEN_TYPE.LINE_END, TOKEN_TYPE.TABLE_SPLIT) || helper.isType(tokens[index + 1], TOKEN_TYPE.WHITE_SPACE) && !helper.isType(tokens[index + 2], TOKEN_TYPE.WHITE_SPACE, TOKEN_TYPE.LINE_END, TOKEN_TYPE.TABLE_SPLIT)) {
+          this.hasSplit = true;
+          this.children.push([]);
+        }
+      } // ----|----|------
+
+
+      if (helper.isLineEnd(tokens[index])) {
+        if (!this.hasSplit || this.children.length === 0) {
+          return false;
+        }
+
+        this.content.push(tokens[index]); // 如果字符串
+
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, {
+    content: [],
+    name: 'split',
+    children: [],
+    test: function test(type, index, tokens) {
+      // 不会存在连续的空格
+      if (!helper.isType(type, TOKEN_TYPE.NO_ORDER_LIST, TOKEN_TYPE.WHITE_SPACE, TOKEN_TYPE.LINE_END, TOKEN_TYPE.TABLE_SPLIT)) {
+        this.stop = true;
+        return false;
+      }
+
+      if (type !== TOKEN_TYPE.TABLE_SPLIT) {
+        if (this.children.length === 0) {
+          // 忽略行首的空格
+          if (helper.isType(type, TOKEN_TYPE.WHITE_SPACE)) {
+            return helper.goOn;
+          }
+
+          this.children.push([]);
+        } // 需要时连续的 - ， --之间不能有空格
+
+
+        this.children[this.children.length - 1].push(tokens[index]);
+      } else if (type === TOKEN_TYPE.TABLE_SPLIT) {
+        // 第一个是 -
+        // 第一个是空格 第二个是 -
+        if (helper.isType(tokens[index + 1], TOKEN_TYPE.NO_ORDER_LIST) || helper.isType(tokens[index + 1], TOKEN_TYPE.WHITE_SPACE) && helper.isType(tokens[index + 2], TOKEN_TYPE.NO_ORDER_LIST)) {
+          this.hasSplit = true;
+          this.children.push([]);
+        }
+      } // ----|----|------
+
+
+      if (helper.isLineEnd(tokens[index])) {
+        if (!this.hasSplit || this.children.length === 0) {
+          return false;
+        }
+
+        this.content.push(tokens[index]); // 如果字符串
+
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }, {
+    content: [],
+    children: [],
+    // [[[xxx], [yyyyy]], []]
+    name: 'tbody',
+    // 二级嵌套
+    test: function test(type, index, tokens) {
+      if (helper.isType(type, TOKEN_TYPE.LINE_END)) {
+        this.children.push([]);
+      } else {
+        if (this.children.length === 0) {
+          if (helper.isType(type, TOKEN_TYPE.WHITE_SPACE)) {
+            return helper.goOn;
+          }
+
+          this.children.push([]);
+        }
+
+        var lastRow = this.children[this.children.length - 1]; // | xcxxx
+
+        if (helper.isType(type, TOKEN_TYPE.TABLE_SPLIT)) {
+          if (!helper.isType(tokens[index + 1], TOKEN_TYPE.WHITE_SPACE, TOKEN_TYPE.LINE_END, TOKEN_TYPE.TABLE_SPLIT) || helper.isType(tokens[index + 1], TOKEN_TYPE.WHITE_SPACE) && !helper.isType(tokens[index + 2], TOKEN_TYPE.WHITE_SPACE, TOKEN_TYPE.LINE_END, TOKEN_TYPE.TABLE_SPLIT)) {
+            lastRow.push([]);
+          }
+        } else {
+          if (lastRow.length === 0) {
+            lastRow.push([]);
+          }
+
+          lastRow[lastRow.length - 1].push(tokens[index]);
+        }
+      }
+
+      if (watchAfter(tokens, index, 2).every(function (i) {
+        return helper.isLineEnd(i);
+      })) {
+        this.content.push(tokens[index]); // 如果字符串
+
+        return {
+          offset: 1
+        };
+      }
+
+      return helper.goOn;
+    }
+  }]; // 需要一个描述符号 \n{0,2}$
+
+  return matchUsefulTokens(index, tokens, queue, handler);
+}
 
 function parser() {
   var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-  var defaultNode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-  var IX = 0;
-
-  function addRaw(node) {
-    var text = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-    node.raw = {
-      text: text,
-      start: IX,
-      end: IX + text.length
-    };
-    return node;
-  }
-
-  var node = defaultNode || addRaw({
-    children: [],
-    type: nodeType.root
-  }, str);
-  /**
-   * 更改切换上下文，方便快速添加children
-   * @method changeCurrentNode
-   * @param  {Object}          child    [需要切换到的node]
-   * @param  {Function}        callback [切换后需要执行的callback]
-   */
-
-  function changeCurrentNode(child, callback) {
-    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    var _options$isPush = options.isPush,
-        isPush = _options$isPush === void 0 ? true : _options$isPush;
-    child.__parent = node;
-    node = child;
-    callback && callback();
-    node = child.__parent;
-    isPush && node.children.push(child);
-    return node;
-  }
-
-  function slice() {
-    var all = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-    str = str.slice(all.length);
-    IX += all.length;
-  }
-  /**
-   * [handleText 处理文本]
-   * @method handleText
-   * @param  {string}   [textStr=''] [description]
-   */
-
-
-  function handleText() {
-    var textStr = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-
-    if (!textStr || typeof textStr !== 'string') {
-      return;
-    } // 链接
-
-
-    if (Reg.url.test(textStr)) {
-      handleText(textStr.replace(Reg.url, function (m, $text, $href) {
-        var child = addRaw({
-          type: nodeType.url,
-          href: $href,
-          alt: $text,
-          children: []
-        }, m);
-        changeCurrentNode(child, function () {
-          handleText($text);
-        });
-        return '';
-      }));
-      return;
-    } // 简单链接
-
-
-    if (Reg.simpleUrl.test(textStr)) {
-      handleText(textStr.replace(Reg.simpleUrl, function (m, $href) {
-        var child = addRaw({
-          type: nodeType.url,
-          href: $href,
-          alt: $href,
-          children: []
-        }, m);
-        changeCurrentNode(child, function () {
-          handleText($href);
-        });
-        return '';
-      }));
-      return;
-    } // 加粗
-
-
-    if (Reg.blod.test(textStr)) {
-      handleText(textStr.replace(Reg.blod, function (m, $0) {
-        var child = addRaw({
-          type: nodeType.blod,
-          children: []
-        }, m);
-        changeCurrentNode(child, function () {
-          handleText($0);
-        });
-        return '';
-      }));
-      return;
-    } // 中划线
-
-
-    if (Reg.lineThrough.test(textStr)) {
-      handleText(textStr.replace(Reg.lineThrough, function (m, $0) {
-        var child = addRaw({
-          type: nodeType.linethrough,
-          children: []
-        }, m);
-        changeCurrentNode(child, function () {
-          handleText($0);
-        });
-        return '';
-      }));
-      return;
-    } // 倾斜
-
-
-    if (Reg.italic.test(textStr)) {
-      handleText(textStr.replace(Reg.italic, function (m, $0) {
-        var child = addRaw({
-          type: nodeType.italic,
-          children: []
-        }, m);
-        changeCurrentNode(child, function () {
-          handleText($0);
-        });
-        return '';
-      }));
-      return;
-    } // 行内code
-
-
-    if (Reg.inlineCode.test(textStr)) {
-      handleText(textStr.replace(Reg.inlineCode, function (m, $0) {
-        if ($0) {
-          var child = addRaw({
-            type: nodeType.inlineCode,
-            children: []
-          }, m);
-          changeCurrentNode(child, function () {
-            handleText($0);
-          });
-        }
-
-        return '';
-      }));
-      return;
-    } // 视频
-
-
-    if (Reg.video.test(textStr)) {
-      handleText(textStr.replace(Reg.video, function (m, $alt, $src) {
-        changeCurrentNode(addRaw({
-          type: nodeType.video,
-          src: $src,
-          alt: $alt
-        }, m));
-        return '';
-      }));
-      return;
-    } // 音频
-
-
-    if (Reg.audio.test(textStr)) {
-      textStr = textStr.replace(Reg.audio, function (m, $alt, $src) {
-        changeCurrentNode(addRaw({
-          type: nodeType.audio,
-          src: $src,
-          alt: $alt
-        }, m));
-        return '';
-      });
-      handleText(textStr);
-      return;
-    } // 图片
-
-
-    if (Reg.img.test(textStr)) {
-      handleText(textStr.replace(Reg.img, function (m, $alt, $src) {
-        changeCurrentNode(addRaw({
-          type: nodeType.img,
-          src: $src,
-          alt: $alt
-        }, m));
-        return '';
-      }));
-      return;
-    } // 换行
-
-
-    if (textStr[0] == '\n') {
-      changeCurrentNode(addRaw({
-        type: nodeType.br
-      }, textStr[0]));
-      handleText(textStr.slice(1));
-      return;
-    } // 文本,如果前一个元素是文本元素，就追加上去，反则新增文本元素
-
-
-    var lastChild = node.children[node.children.length - 1];
-
-    if (lastChild && lastChild.type === nodeType.text) {
-      lastChild.value += textStr[0];
-    } else {
-      changeCurrentNode(addRaw({
-        type: nodeType.text,
-        value: handleTranslationCode(textStr[0])
-      }, ''));
-    }
-
-    handleText(textStr.slice(1));
-  } // 处理需转译字符
-
-
-  function handleTranslationCode(STR) {
-    return STR.replace(/>/g, '>').replace(/\\#/g, '#').replace(/\\`/g, '`').replace(/\\-/g, '-').replace(/\\\*/g, '*');
-  } // 迭代器
-
-
-  function next() {
-    if (/^\n{1,2}$/.test(str)) {
-      return;
-    } // 解析完毕
-
-
-    if (!str) {
-      return;
-    } // 换行符
-
-
-    if (Reg.br.test(str)) {
-      var _str$match = str.match(Reg.br),
-          _str$match2 = _slicedToArray(_str$match, 1),
-          all = _str$match2[0];
-
-      changeCurrentNode(addRaw({
-        type: nodeType.br
-      }, all));
-      slice(all);
-      next();
-      return;
-    } // 标题
-
-
-    if (Reg.head.test(str)) {
-      var _ref3 = str.match(Reg.head) || [],
-          _ref4 = _slicedToArray(_ref3, 3),
-          _all = _ref4[0],
-          head = _ref4[1],
-          content = _ref4[2];
-
-      var child = addRaw({
-        type: nodeType["h".concat(head.length)],
-        __headLen: head.length,
-        id: content,
-        children: []
-      }, _all);
-      changeCurrentNode(child, function () {
-        handleText(content);
-      });
-      slice(_all);
-      next();
-      return;
-    } // hr
-
-
-    if (Reg.hr.test(str)) {
-      var _ref5 = str.match(Reg.hr) || [],
-          _ref6 = _slicedToArray(_ref5, 1),
-          _all2 = _ref6[0];
-
-      if (_all2 !== undefined) {
-        changeCurrentNode(addRaw({
-          type: nodeType.hr,
-          children: []
-        }, _all2));
-      }
-
-      slice(_all2);
-      next();
-      return;
-    }
-
-    if (parseQuote(str, function (_ref7) {
-      var raw = _ref7.raw,
-          content = _ref7.content;
-      var h = addRaw({
-        type: nodeType.queto,
-        children: []
-      }, raw);
-      changeCurrentNode(h);
-      h.children = parser(content, h).children;
-      slice(raw);
-    })) {
-      next();
-      return;
-    } // code
-
-
-    if (parseBlockCode(str, function (_ref8) {
-      var language = _ref8.language,
-          content = _ref8.content,
-          raw = _ref8.raw;
-      changeCurrentNode(addRaw({
-        type: nodeType.code,
-        language: language,
-        value: content
-      }, raw));
-      slice(raw);
-    })) {
-      next();
-      return;
-    }
-
-    if (parseUL(str, function (_ref9) {
-      var raw = _ref9.raw,
-          list = _ref9.list;
-      var LIST_STYLES = ['disc', // 实心圆
-      'circle', // 空心圆
-      'square' // 方块
-      ];
-      var DECIMAL = 'decimal';
-
-      var handleList = function handleList(ul) {
-        var children = ul.children,
-            deep = ul.deep;
-        var child = {
-          type: nodeType.ul,
-          listStyleType: children[0].char === '+' ? DECIMAL : LIST_STYLES[deep % LIST_STYLES.length],
-          children: []
-        };
-        changeCurrentNode(child, function () {
-          children.forEach(function (item) {
-            changeCurrentNode({
-              type: item.type,
-              children: []
-            }, function () {
-              item.children.forEach(function (line) {
-                handleText(line);
-              });
-              item.ul.children.length && handleList(item.ul);
-            });
-          });
-        });
-        return child;
-      };
-
-      var rootUL = handleList(list);
-      rootUL.__root = true; // 根部ul，用以区分嵌套的ul
-
-      slice(raw);
-    })) {
-      next();
-      return;
-    } // tbale
-
-
-    if (parseTable(str, function (result) {
-      changeCurrentNode(addRaw({
-        type: nodeType.table,
-        children: []
-      }, result.raw), function () {
-        // table头
-        changeCurrentNode(addRaw({
-          type: nodeType.thead,
-          children: []
-        }), function () {
-          changeCurrentNode(addRaw({
-            type: nodeType.tr,
-            children: []
-          }), function () {
-            result.table.head.forEach(function (item) {
-              changeCurrentNode(addRaw({
-                type: nodeType.th,
-                children: []
-              }, item), function () {
-                handleText(item);
-              });
-            });
-          });
-        });
-        changeCurrentNode(addRaw({
-          type: nodeType.tbody,
-          children: []
-        }), function () {
-          result.table.body.forEach(function (item) {
-            changeCurrentNode(addRaw({
-              type: nodeType.tr,
-              children: []
-            }), function () {
-              item.forEach(function (item) {
-                changeCurrentNode(addRaw({
-                  type: nodeType.td,
-                  children: []
-                }, item), function () {
-                  handleText(item);
-                });
-              });
-            });
-          });
-        });
-      });
-      changeCurrentNode(addRaw({
-        type: nodeType.br
-      }, '\n\n'));
-      slice(result.raw);
-    })) {
-      next();
-      return;
-    } // 单行text
-
-
-    if (Reg.text.test(str)) {
-      var _ref10 = str.match(Reg.text) || [''],
-          _ref11 = _slicedToArray(_ref10, 1),
-          _all3 = _ref11[0];
-
-      handleText(_all3);
-      slice(_all3);
-      next();
-      return;
-    }
-
-    throw new Error("cannot handle str:".concat(str));
-  }
-
-  next();
-  return node;
+  return toAST(token(str));
 }
 /**@typedef {import("../@type").DiffResult} DiffResult */
 
@@ -1428,6 +2008,13 @@ function trans(node, $parent) {
         break;
       }
 
+    case nodeType.linethrough:
+      {
+        ele = document.createElement('span');
+        ele.style.cssText += '; text-decoration: line-through;';
+        break;
+      }
+
     case nodeType.code:
       {
         ele = document.createElement('pre');
@@ -1441,7 +2028,7 @@ function trans(node, $parent) {
                 break;
               }
 
-            case 'value':
+            case 'code':
               {
                 code.textContent = newNode[key]; // 不能使用innerHTML
 
@@ -1452,7 +2039,7 @@ function trans(node, $parent) {
 
         node.__update('language', node);
 
-        node.__update('value', node);
+        node.__update('code', node);
 
         ele.appendChild(code);
         break;

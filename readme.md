@@ -49,6 +49,14 @@ lymd.markdown(document.body, `# hello lymd`);
 !![支持iframe](<iframe></iframe>)
 ```
 
+## todo
+- 支持查看AST
+- 支持自定义渲染
+- 支持格式化
+- 支持对AST进行修改，并输出为字
+- 支持注释语法
+- 支持html标签解析？
+
 ## issue
 
 [移步 github issue](https://github.com/LingYanSi/markdown-parser/issues)

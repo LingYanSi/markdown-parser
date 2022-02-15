@@ -113,4 +113,4 @@ export const TOKEN_TYPE = {
     LINE_THROUGH: 'linethrough', // ~
     BLOB: 'blob', // *
     STRING: 'string', // 非以上关键字符之外的连续字符
-}
+};

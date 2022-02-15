@@ -84,7 +84,6 @@ class Markdown {
         this.dom.classList.add('markdown');
         const result = getParseResult(str);
         const diffResult = diffNode(this.prevRoot, result.root);
-        console.log(diffResult, this.prevRoot, result.root)
         this.prevRoot = result.root;
         patch(diffResult, this.dom);
 

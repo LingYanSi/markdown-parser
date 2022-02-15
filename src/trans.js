@@ -93,7 +93,7 @@ export default function trans(node, $parent, option = {}) {
         }
         case nodeType.linethrough: {
             ele = document.createElement('span');
-            ele.style.cssText += '; text-decoration: line-through;'
+            ele.style.cssText += '; text-decoration: line-through;';
             break;
         }
         case nodeType.code: {
