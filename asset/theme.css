@@ -77,10 +77,12 @@
 }
 
 .markdown table {
-    border-color: #eee;
+    border-spacing: 0;
     border-collapse: collapse;
+    border: 1px solid #eee;
 }
 
 .markdown table th,.markdown table td {
     padding: .5em;
+    border: 1px solid #eee;
 }
