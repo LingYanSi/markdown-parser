@@ -185,7 +185,7 @@ export default function trans(node, $parent, option = {}) {
             node.indent && (ele.style.cssText += ';padding-left: 2em;');
             // table表格需要设置边框
             if (node.type == nodeType.table) {
-                ele.setAttribute('border', '1');
+                ele.setAttribute('border', '0');
             }
         }
     }
