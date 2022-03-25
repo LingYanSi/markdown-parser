@@ -66,6 +66,7 @@ export default function trans(node, $parent, option = {}) {
                         class="lazy-load-img img-loading"
                         data-lazy-img="${node.src}"
                         data-src="${node.src}"
+                        referrerpolicy="no-referrer"
                         style="position: absolute; width: 100%; height: 100%; top: 0;" />
                 </div>`;
                 break;
