@@ -74,6 +74,7 @@ export default function trans(node, $parent, option = {}) {
                 ele = document.createElement(node.type);
                 ele.src = node.src;
                 ele.alt = node.alt;
+                ele.referrerPolicy = 'no-referrer';
                 break;
             }
         }
