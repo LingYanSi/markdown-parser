@@ -14,9 +14,9 @@ import { getParserNodeInfo } from './helper.js';
 // 所谓的渲染到多端
 
 function removeAllChildren(element) {
-  while (element.firstChild) {
-    element.removeChild(element.firstChild)
-  }
+    while (element.firstChild) {
+        element.removeChild(element.firstChild);
+    }
 }
 
 /**
@@ -93,23 +93,23 @@ export default function trans(node, $parent, option = {}) {
         case nodeType.text: {
             // const text = node.value;
             // ele = document.createTextNode(text);
-            ele = document.createElement('span')
-            ele.setAttribute('md-type', 'text-node')
+            ele = document.createElement('span');
+            ele.setAttribute('md-type', 'text-node');
             node.__update = (key, newNode) => {
-                removeAllChildren(ele)
+                removeAllChildren(ele);
                 // 对纯文本节点做链接提取，提升用户体验
                 newNode[key].split(/([A-z]+:\/{2}\S+)/g).forEach((i, index) => {
                     if (index % 2 === 1) {
-                        const a = document.createElement('a')
-                        a.href = i
-                        a.textContent = i
-                        ele.appendChild(a)
+                        const a = document.createElement('a');
+                        a.href = i;
+                        a.textContent = i;
+                        ele.appendChild(a);
                     } else {
-                        ele.appendChild(document.createTextNode(i))
+                        ele.appendChild(document.createTextNode(i));
                     }
-                })
-            }
-            node.__update('value', node)
+                });
+            };
+            node.__update('value', node);
             break;
         }
         case nodeType.br: {
