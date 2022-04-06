@@ -13,6 +13,12 @@ import { getParserNodeInfo } from './helper.js';
 // 为什么呢？因为比如有些type video，我们想使用一个组件来实现，而非一个html标签来实现
 // 所谓的渲染到多端
 
+function removeAllChildren(element) {
+  while (element.firstChild) {
+    element.removeChild(element.firstChild)
+  }
+}
+
 /**
  * AST 转 dom
  * @param {ASTNode} node
@@ -85,8 +91,25 @@ export default function trans(node, $parent, option = {}) {
             break;
         }
         case nodeType.text: {
-            const text = node.value;
-            ele = document.createTextNode(text);
+            // const text = node.value;
+            // ele = document.createTextNode(text);
+            ele = document.createElement('span')
+            ele.setAttribute('md-type', 'text-node')
+            node.__update = (key, newNode) => {
+                removeAllChildren(ele)
+                // 对纯文本节点做链接提取，提升用户体验
+                newNode[key].split(/([A-z]+:\/{2}\S+)/g).forEach((i, index) => {
+                    if (index % 2 === 1) {
+                        const a = document.createElement('a')
+                        a.href = i
+                        a.textContent = i
+                        ele.appendChild(a)
+                    } else {
+                        ele.appendChild(document.createTextNode(i))
+                    }
+                })
+            }
+            node.__update('value', node)
             break;
         }
         case nodeType.br: {
