@@ -103,6 +103,7 @@ export default function trans(node, $parent, option = {}) {
                         const a = document.createElement('a');
                         a.href = i;
                         a.textContent = i;
+                        a.target = '_blank';
                         ele.appendChild(a);
                     } else {
                         ele.appendChild(document.createTextNode(i));
