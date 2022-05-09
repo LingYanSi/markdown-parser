@@ -1,8 +1,9 @@
 import { diffNode } from './diff.js';
-import { parser } from './tokenizer.js';
+import { parser } from './parser/index.js';
 import patch from './patch.js';
 import trans from './trans.js';
 import { getParserNodeInfo } from './helper.js';
+import { formater } from './formater/index.js';
 
 const cache = {};
 
@@ -109,6 +110,7 @@ function markdownInfo(str) {
 
 export {
     Markdown,
+    formater,
     parser,
     trans,
     codeHighlight,
