@@ -1,9 +1,14 @@
-import { createAstNode } from './createAstNode.js'
+import { createAstNode } from './createAstNode.js';
 import { nodeType, TKS, helper } from './util.js';
 
 import { parseInlineNodeLoop, toInlineNode } from './nodeInline.js';
 
-import { parseBlockCode, parseBlockQuote, parseHr, parseHead } from './nodeBlock.js';
+import {
+    parseBlockCode,
+    parseBlockQuote,
+    parseHr,
+    parseHead,
+} from './nodeBlock.js';
 import { parseTable } from './nodeTable.js';
 import { parseList } from './nodeUL.js';
 
@@ -260,18 +265,20 @@ function toAST(tokens, defaultRoot) {
                     node.listStyleType = info[0].listStyleType;
 
                     info.forEach((item) => {
-                        const liNode = createAstNode(item.nodeType || nodeType.li);
+                        const liNode = createAstNode(
+                            item.nodeType || nodeType.li
+                        );
                         parseInlineNodeLoop(item.head, liNode);
                         item.children.forEach((ele) => {
                             parseInlineNodeLoop(ele.content, liNode);
                         });
                         node.push(liNode);
-                        item.ul.length && xx(item.ul, liNode)
+                        item.ul.length && xx(item.ul, liNode);
                     });
 
                     root.push(node);
-                }
-                xx(info, root)
+                };
+                xx(info, root);
                 index += matchTokens.length;
             })
         ) {

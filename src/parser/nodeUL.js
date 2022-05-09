@@ -1,4 +1,10 @@
-import { helper, matchUsefulTokens, TKS, nodeType, watchAfter } from './util.js'
+import {
+    helper,
+    matchUsefulTokens,
+    TKS,
+    nodeType,
+    watchAfter,
+} from './util.js';
 
 /**
  * 将一维数组分析组合为多维
@@ -10,31 +16,33 @@ function nestList(liList) {
         deep: 0,
         ident: 0,
         children: [],
-    }
-    const stack = []
+    };
+    const stack = [];
     // 当前
-    liList.forEach(item => {
-        const deep = Math.floor(item.ident.map(i => i.raw).join('').length / 4)
+    liList.forEach((item) => {
+        const deep = Math.floor(
+            item.ident.map((i) => i.raw).join('').length / 4
+        );
         while (stack.length) {
-            const relative = stack[stack.length - 1]
+            const relative = stack[stack.length - 1];
             if (relative.deep < deep) {
-                item.deep = relative.deep + 1
-                relative.ul.push(item)
-                stack.push(item)
-                break
+                item.deep = relative.deep + 1;
+                relative.ul.push(item);
+                stack.push(item);
+                break;
             } else {
-                stack.pop()
+                stack.pop();
             }
         }
 
         if (!stack.length) {
-            item.deep = 0
-            root.children.push(item)
-            stack.push(item)
+            item.deep = 0;
+            root.children.push(item);
+            stack.push(item);
         }
-    })
+    });
 
-    return root.children
+    return root.children;
 }
 
 /** @typedef {} MatchHanlder  */

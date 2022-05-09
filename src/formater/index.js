@@ -14,7 +14,7 @@ import { parser } from './../parser/index.js';
  * @param {string} font [展示table文本的元素css font]
  * @returns {string}
  */
- export function formatTable(str, font = '12px monospace') {
+export function formatTable(str, font = '12px monospace') {
     var canvas = document.createElement('canvas');
     var ctx = canvas.getContext('2d');
     ctx.font = font;
@@ -55,7 +55,11 @@ import { parser } from './../parser/index.js';
                         const paddingW = column[index] - width;
                         const [padchar, num, perWidth] = /^-+$/.test(i.trim())
                             ? [splitChar, Math.round(paddingW / splitW), splitW]
-                            : [spaceChar, Math.round(paddingW / spaceW), spaceW];
+                            : [
+                                  spaceChar,
+                                  Math.round(paddingW / spaceW),
+                                  spaceW,
+                              ];
 
                         // 如果当前宽度没有被补齐，则同一行下一个字符串的宽度需要被缩短
                         if (arr[index + 1]) {
@@ -70,68 +74,14 @@ import { parser } from './../parser/index.js';
 }
 
 function fmtList1(str) {
-    return str.split(/\n/g).map(i => {
-        return i.replace(/^\s+/, ($0) => {
-            return ' '.repeat($0.length - $0.length % 4)
+    return str
+        .split(/\n/g)
+        .map((i) => {
+            return i.replace(/^\s+/, ($0) => {
+                return ' '.repeat($0.length - ($0.length % 4));
+            });
         })
-    }).join('\n')
-}
-
-/**
- * 因为js是单线程的，因此可以借助这个特性在这里使用类似全局变量
- * 处理ident的问题
- */
-let ident = -1;
-function identSpace() {
-    return ' '.repeat(ident * 5);
-}
-
-/**
- * 格式化列表
- * @param {ASTNode} pnode
- * @returns
- */
-function fmtList(pnode) {
-    const tokensStr = pnode.tokens.map(i => i.raw).join('')
-    const startSpace = tokensStr.match(/^\s*/)[0]
-    const endSpace = tokensStr.match(/\s*$/)[0]
-    const LIST_STYLE_CHAR = pnode.listStyleType === 'decimal' ? '+' : '-';
-    ident += 1;
-
-    // 需要有堆栈的概念，去处理缩进问题
-    let result = pnode.children
-        .map((item) => {
-            const { type } = item;
-            switch (type) {
-                case 'li': {
-                    return (
-                        identSpace() +
-                        LIST_STYLE_CHAR +
-                        ' ' +
-                        format(item).trimLeft()
-                    );
-                }
-                case 'li-todo': {
-                    return (
-                        identSpace() +
-                        LIST_STYLE_CHAR +
-                        ' [] ' +
-                        format(item).trimLeft()
-                    );
-                }
-                case 'li-done': {
-                    return (
-                        identSpace() +
-                        LIST_STYLE_CHAR +
-                        ' [x] ' +
-                        format(item).trimLeft()
-                    );
-                }
-            }
-        })
-        .join('');
-    ident -= 1;
-    return startSpace + result + endSpace;
+        .join('\n');
 }
 
 /**
@@ -148,11 +98,11 @@ function format(pnode, container) {
                 case nodeType.text:
                     return node.value;
                 case nodeType.table: {
-                    const tstr = node.tokens.map(i => i.raw).join('')
+                    const tstr = node.tokens.map((i) => i.raw).join('');
                     return formatTable(tstr, getComputedStyle(container).font);
                 }
                 case nodeType.ul:
-                    return fmtList1(node.tokens.map(i => i.raw).join(''))
+                    return fmtList1(node.tokens.map((i) => i.raw).join(''));
                 case nodeType.h1:
                 case nodeType.h2:
                 case nodeType.h3:
@@ -161,7 +111,7 @@ function format(pnode, container) {
                 case nodeType.h6:
                     return fmtHead(node);
                 default:
-                    return node.tokens.map(i => i.raw).join('');
+                    return node.tokens.map((i) => i.raw).join('');
             }
         })
         .join('');
@@ -173,7 +123,9 @@ function format(pnode, container) {
  */
 function fmtHead(pnode) {
     if (/^h[1-9]$/.test(pnode.type)) {
-        return '#' + ' '.repeat(pnode.__headLen) + format(pnode).trimStart() + "\n"
+        return (
+            '#' + ' '.repeat(pnode.__headLen) + format(pnode).trimStart() + '\n'
+        );
     }
 }
 

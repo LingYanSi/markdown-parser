@@ -1,5 +1,5 @@
-import { helper, matchUsefulTokens, TKS, nodeType } from './util.js'
-import { createAstNode } from './createAstNode.js'
+import { helper, matchUsefulTokens, TKS, nodeType } from './util.js';
+import { createAstNode } from './createAstNode.js';
 
 /** @typedef {(matchTokens: Token[], info: Object) => any } MatchHanlder  */
 

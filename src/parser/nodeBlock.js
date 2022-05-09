@@ -1,4 +1,10 @@
-import { helper, matchUsefulTokens, TKS, watchAfter, watchAfterUtil } from './util.js'
+import {
+    helper,
+    matchUsefulTokens,
+    TKS,
+    watchAfter,
+    watchAfterUtil,
+} from './util.js';
 
 /** @typedef {(matchTokens: Token[], info: Object) => any } MatchHanlder  */
 
@@ -67,7 +73,7 @@ export function parseHead(index, tokens, handler) {
  * @param {MatchHanlder} handler
  * @returns
  */
- export function parseBlockCode(index, tokens, handler) {
+export function parseBlockCode(index, tokens, handler) {
     if (!helper.isLineStart(tokens, index)) {
         return false;
     }

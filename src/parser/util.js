@@ -1,9 +1,6 @@
 import nodeType, { TOKEN_TYPE as TKS } from '../nodeType.js';
 
-export {
-    TKS,
-    nodeType,
-}
+export { TKS, nodeType };
 
 /**
  * 向后看，知道满足某一个条件
@@ -43,7 +40,7 @@ export function watchAfterUtil(index, tokens, fn) {
  * @param {number} [length=1] 需要后续几个token
  * @returns
  */
- export function watchAfter(tokens, offset, length = 1) {
+export function watchAfter(tokens, offset, length = 1) {
     // 使用for循环替代slice，因为slice不会严格返回指定长度的数组
     const sliceTK = [];
     for (let index = offset + 1; index < offset + length + 1; index++) {

@@ -1,4 +1,4 @@
-import { helper, matchUsefulTokens, TKS, watchAfter } from './util.js'
+import { helper, matchUsefulTokens, TKS, watchAfter } from './util.js';
 
 /** @typedef {(matchTokens: Token[], info: Object) => any } MatchHanlder  */
 
