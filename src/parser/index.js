@@ -126,7 +126,7 @@ function token(input = '') {
                 let str = '';
                 // 处理转译字符\，避免关键char不能够正常显示
                 [str, offset] =
-                    char === '\\' && nextChar ? [nextChar, 2] : [char, 1];
+                    char === '\\' && nextChar ? [char + nextChar, 2] : [char, 1];
                 const lastToken = tokens[tokens.length - 1];
                 if (lastToken && lastToken.type === TKS.STRING) {
                     lastToken.raw += str;
