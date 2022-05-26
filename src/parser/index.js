@@ -34,73 +34,88 @@ function token(input = '') {
     while (index < input.length) {
         const char = input[index];
         let offset = 1;
+        // <!--  -->
         switch (char) {
             case '-': {
+                if (input.slice(index, index + 3) === '-->') {
+                    offset = 3
+                    tokens.push(
+                        new Token(TKS.COMMENT_END, char, index, index + offset)
+                    );
+                    break
+                }
                 tokens.push(
-                    new Token(TKS.NO_ORDER_LIST, char, index, index + 1)
+                    new Token(TKS.NO_ORDER_LIST, char, index, index + offset)
                 );
                 break;
             }
             case '+': {
-                tokens.push(new Token(TKS.ORDER_LIST, char, index, index + 1));
+                tokens.push(new Token(TKS.ORDER_LIST, char, index, index + offset));
                 break;
             }
             case '<': {
+                if (input.slice(index, index + 4) === '<!--') {
+                    offset = 4
+                    tokens.push(
+                        new Token(TKS.COMMENT_START, char, index, index + offset)
+                    );
+                    break
+                }
                 tokens.push(
-                    new Token(TKS.SIMPLE_URL_START, char, index, index + 1)
+                    new Token(TKS.SIMPLE_URL_START, char, index, index + offset)
                 );
                 break;
             }
             case '>': {
                 tokens.push(
-                    new Token(TKS.SIMPLE_URL_END, char, index, index + 1)
+                    new Token(TKS.SIMPLE_URL_END, char, index, index + offset)
                 );
                 break;
             }
             case '(': {
-                tokens.push(new Token(TKS.URL_START, char, index, index + 1));
+                tokens.push(new Token(TKS.URL_START, char, index, index + offset));
                 break;
             }
             case ')': {
-                tokens.push(new Token(TKS.URL_END, char, index, index + 1));
+                tokens.push(new Token(TKS.URL_END, char, index, index + offset));
                 break;
             }
             case '[': {
                 tokens.push(
-                    new Token(TKS.URL_DESC_START, char, index, index + 1)
+                    new Token(TKS.URL_DESC_START, char, index, index + offset)
                 );
                 break;
             }
             case ']': {
                 tokens.push(
-                    new Token(TKS.URL_DESC_END, char, index, index + 1)
+                    new Token(TKS.URL_DESC_END, char, index, index + offset)
                 );
                 break;
             }
             case '#': {
-                tokens.push(new Token(TKS.HEAD_TITLE, char, index, index + 1));
+                tokens.push(new Token(TKS.HEAD_TITLE, char, index, index + offset));
                 break;
             }
             case '!': {
-                tokens.push(new Token(TKS.IMG_START, char, index, index + 1));
+                tokens.push(new Token(TKS.IMG_START, char, index, index + offset));
                 break;
             }
             case '|': {
-                tokens.push(new Token(TKS.TABLE_SPLIT, char, index, index + 1));
+                tokens.push(new Token(TKS.TABLE_SPLIT, char, index, index + offset));
                 break;
             }
             case '`': {
-                tokens.push(new Token(TKS.CODE_BLOCK, char, index, index + 1));
+                tokens.push(new Token(TKS.CODE_BLOCK, char, index, index + offset));
                 break;
             }
             case '~': {
                 tokens.push(
-                    new Token(TKS.LINE_THROUGH, char, index, index + 1)
+                    new Token(TKS.LINE_THROUGH, char, index, index + offset)
                 );
                 break;
             }
             case '*': {
-                tokens.push(new Token(TKS.BLOB, char, index, index + 1));
+                tokens.push(new Token(TKS.BLOB, char, index, index + offset));
                 break;
             }
             case ' ': {
@@ -110,14 +125,14 @@ function token(input = '') {
                     lastToken.end += 1;
                 } else {
                     tokens.push(
-                        new Token(TKS.WHITE_SPACE, char, index, index + 1)
+                        new Token(TKS.WHITE_SPACE, char, index, index + offset)
                     );
                 }
 
                 break;
             }
             case '\n': {
-                tokens.push(new Token(TKS.LINE_END, char, index, index + 1));
+                tokens.push(new Token(TKS.LINE_END, char, index, index + offset));
                 break;
             }
             default: {
@@ -126,7 +141,9 @@ function token(input = '') {
                 let str = '';
                 // 处理转译字符\，避免关键char不能够正常显示
                 [str, offset] =
-                    char === '\\' && nextChar ? [char + nextChar, 2] : [char, 1];
+                    char === '\\' && nextChar
+                        ? [char + nextChar, 2]
+                        : [char, 1];
                 const lastToken = tokens[tokens.length - 1];
                 if (lastToken && lastToken.type === TKS.STRING) {
                     lastToken.raw += str;

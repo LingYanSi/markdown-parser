@@ -8,7 +8,6 @@ export default {
     br: 'br',
     hr: 'hr',
     root: 'root',
-
     blod: 'b',
     italic: 'i',
     linethrough: 'lineThrough',
@@ -19,21 +18,20 @@ export default {
     h4: 'h4',
     h5: 'h5',
     h6: 'h6',
-
     queto: 'queto',
     code: 'code',
-
     table: 'table',
     thead: 'thead',
     tbody: 'tbody',
     tr: 'tr',
     th: 'th',
     td: 'td',
-
     ul: 'ul',
     li: 'li',
     li_done: 'li-done',
     li_todo: 'li-todo',
+    comment: 'comment', // comment
+    htmlRaw: 'htmlRaw', // html原始元素
 };
 
 export const Reg = {
@@ -113,4 +111,6 @@ export const TOKEN_TYPE = {
     LINE_THROUGH: 'linethrough', // ~
     BLOB: 'blob', // *
     STRING: 'string', // 非以上关键字符之外的连续字符
+    COMMENT_START: 'comment_start',
+    COMMENT_END: 'comment_end',
 };

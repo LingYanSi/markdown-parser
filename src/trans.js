@@ -90,6 +90,16 @@ export default function trans(node, $parent, option = {}) {
             ele.target = '_blank';
             break;
         }
+        case nodeType.comment: {
+            ele = document.createComment('');
+            node.__update = (key, newNode) => {
+                if (key === 'data') {
+                    ele.data = newNode[key]
+                }
+            };
+            node.__update('data', node);
+            break;
+        }
         case nodeType.text: {
             // const text = node.value;
             // ele = document.createTextNode(text);

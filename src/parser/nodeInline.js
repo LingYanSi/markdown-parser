@@ -28,6 +28,25 @@ function parseImg(index, tokens, handler) {
     return false;
 }
 
+export function parseComment(index, tokens, handler) {
+    // 如何完美结合起来
+    const queue = [
+        TKS.COMMENT_START,
+        {
+            content: [],
+            name: 'content',
+            test: (type) =>
+                helper.isType(type, TKS.COMMENT_END)
+                    ? { offset: 0 }
+                    : helper.goOn,
+        },
+        TKS.COMMENT_END,
+    ];
+    // 在这里存储匹配到的结果，然后对，某些可递归元素继续解析 比如 [can parse content]()
+
+    return matchUsefulTokens(index, tokens, queue, handler);
+}
+
 /**
  * 解析url
  * @param {number} index
@@ -251,6 +270,17 @@ export function toInlineNode(index, tokens, parentNode) {
             const node = createAstNode(nodeType.img, matchTokens);
             node.src = helper.tokensToString(info.src);
             node.alt = helper.tokensToString(info.alt);
+            parentNode.push(node);
+            index += matchTokens.length;
+        })
+    ) {
+        return index;
+    }
+
+    if (
+        parseComment(index, tokens, (matchTokens, info) => {
+            const node = createAstNode(nodeType.comment, matchTokens);
+            node.data = helper.tokensToString(info.content);
             parentNode.push(node);
             index += matchTokens.length;
         })
