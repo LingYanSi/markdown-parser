@@ -95,7 +95,7 @@ export default function trans(node, $parent, option = {}) {
             ele = document.createComment('');
             node.__update = (key, newNode) => {
                 if (key === 'data') {
-                    ele.data = newNode[key]
+                    ele.data = newNode[key];
                 }
             };
             node.__update('data', node);
@@ -135,10 +135,10 @@ export default function trans(node, $parent, option = {}) {
         }
         case nodeType.code: {
             ele = document.createElement('pre');
-            ele.className = "blockCode"
+            ele.className = 'blockCode';
             const code = document.createElement('code');
             // 需要在node上添加__update方法，方便更新属性
-            let codeContent = ''
+            let codeContent = '';
             node.__update = (key, newNode) => {
                 switch (key) {
                     case 'language': {
@@ -148,7 +148,7 @@ export default function trans(node, $parent, option = {}) {
                         break;
                     }
                     case 'code': {
-                        codeContent = newNode[key]
+                        codeContent = newNode[key];
                         code.textContent = codeContent; // 不能使用innerHTML
                         break;
                     }
@@ -159,15 +159,15 @@ export default function trans(node, $parent, option = {}) {
             node.__update('language', node);
             node.__update('code', node);
 
-            const copyBtn = document.createElement('div')
-            copyBtn.textContent = 'copy'
-            copyBtn.className = 'blockCodeCopyBtn'
+            const copyBtn = document.createElement('div');
+            copyBtn.textContent = 'copy';
+            copyBtn.className = 'blockCodeCopyBtn';
 
             copyBtn.addEventListener('click', () => {
-                copyToClipboard(codeContent)
-            })
+                copyToClipboard(codeContent);
+            });
 
-            ele.appendChild(copyBtn)
+            ele.appendChild(copyBtn);
             ele.appendChild(code);
             break;
         }

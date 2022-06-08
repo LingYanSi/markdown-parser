@@ -38,11 +38,11 @@ function token(input = '') {
         switch (char) {
             case '-': {
                 if (input.slice(index, index + 3) === '-->') {
-                    offset = 3
+                    offset = 3;
                     tokens.push(
                         new Token(TKS.COMMENT_END, char, index, index + offset)
                     );
-                    break
+                    break;
                 }
                 tokens.push(
                     new Token(TKS.NO_ORDER_LIST, char, index, index + offset)
@@ -50,16 +50,23 @@ function token(input = '') {
                 break;
             }
             case '+': {
-                tokens.push(new Token(TKS.ORDER_LIST, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.ORDER_LIST, char, index, index + offset)
+                );
                 break;
             }
             case '<': {
                 if (input.slice(index, index + 4) === '<!--') {
-                    offset = 4
+                    offset = 4;
                     tokens.push(
-                        new Token(TKS.COMMENT_START, char, index, index + offset)
+                        new Token(
+                            TKS.COMMENT_START,
+                            char,
+                            index,
+                            index + offset
+                        )
                     );
-                    break
+                    break;
                 }
                 tokens.push(
                     new Token(TKS.SIMPLE_URL_START, char, index, index + offset)
@@ -73,11 +80,15 @@ function token(input = '') {
                 break;
             }
             case '(': {
-                tokens.push(new Token(TKS.URL_START, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.URL_START, char, index, index + offset)
+                );
                 break;
             }
             case ')': {
-                tokens.push(new Token(TKS.URL_END, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.URL_END, char, index, index + offset)
+                );
                 break;
             }
             case '[': {
@@ -93,19 +104,27 @@ function token(input = '') {
                 break;
             }
             case '#': {
-                tokens.push(new Token(TKS.HEAD_TITLE, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.HEAD_TITLE, char, index, index + offset)
+                );
                 break;
             }
             case '!': {
-                tokens.push(new Token(TKS.IMG_START, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.IMG_START, char, index, index + offset)
+                );
                 break;
             }
             case '|': {
-                tokens.push(new Token(TKS.TABLE_SPLIT, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.TABLE_SPLIT, char, index, index + offset)
+                );
                 break;
             }
             case '`': {
-                tokens.push(new Token(TKS.CODE_BLOCK, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.CODE_BLOCK, char, index, index + offset)
+                );
                 break;
             }
             case '~': {
@@ -132,7 +151,9 @@ function token(input = '') {
                 break;
             }
             case '\n': {
-                tokens.push(new Token(TKS.LINE_END, char, index, index + offset));
+                tokens.push(
+                    new Token(TKS.LINE_END, char, index, index + offset)
+                );
                 break;
             }
             default: {
