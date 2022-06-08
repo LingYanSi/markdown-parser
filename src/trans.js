@@ -5,6 +5,7 @@
  */
 import nodeType from './nodeType.js';
 import { getParserNodeInfo } from './helper.js';
+import { copyToClipboard } from './copy.js';
 
 /**@typedef {import("../@type").ASTNode} ASTNode */
 
@@ -134,8 +135,10 @@ export default function trans(node, $parent, option = {}) {
         }
         case nodeType.code: {
             ele = document.createElement('pre');
+            ele.className = "blockCode"
             const code = document.createElement('code');
             // 需要在node上添加__update方法，方便更新属性
+            let codeContent = ''
             node.__update = (key, newNode) => {
                 switch (key) {
                     case 'language': {
@@ -145,7 +148,8 @@ export default function trans(node, $parent, option = {}) {
                         break;
                     }
                     case 'code': {
-                        code.textContent = newNode[key]; // 不能使用innerHTML
+                        codeContent = newNode[key]
+                        code.textContent = codeContent; // 不能使用innerHTML
                         break;
                     }
                     default:
@@ -154,6 +158,16 @@ export default function trans(node, $parent, option = {}) {
             };
             node.__update('language', node);
             node.__update('code', node);
+
+            const copyBtn = document.createElement('div')
+            copyBtn.textContent = 'copy'
+            copyBtn.className = 'blockCodeCopyBtn'
+
+            copyBtn.addEventListener('click', () => {
+                copyToClipboard(codeContent)
+            })
+
+            ele.appendChild(copyBtn)
             ele.appendChild(code);
             break;
         }

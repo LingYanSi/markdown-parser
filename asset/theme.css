@@ -74,6 +74,7 @@
 
 .markdown .highlight {
     border-radius: 5px;
+    min-height: 2em;
 }
 
 .markdown table {
@@ -86,4 +87,16 @@
     padding: .5em;
     border-right: 1px solid #eee;
     border-bottom: 1px solid #eee;
+}
+
+.markdown .blockCode {
+    position: relative;
+}
+
+.markdown .blockCodeCopyBtn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    color: #fff;
+    cursor: pointer;
 }
