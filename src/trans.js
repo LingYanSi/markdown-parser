@@ -159,6 +159,8 @@ export default function trans(node, $parent, option = {}) {
             node.__update('language', node);
             node.__update('code', node);
 
+            const tools = document.createElement('div');
+            tools.className = 'blockCodeTools';
             const copyBtn = document.createElement('div');
             copyBtn.textContent = 'copy';
             copyBtn.className = 'blockCodeCopyBtn';
@@ -167,7 +169,14 @@ export default function trans(node, $parent, option = {}) {
                 copyToClipboard(codeContent);
             });
 
-            ele.appendChild(copyBtn);
+            ['red', 'yellow', 'green'].forEach((i) => {
+                const n = document.createElement('span');
+                n.className = 'code-' + i;
+                tools.appendChild(n);
+            });
+            tools.appendChild(copyBtn);
+
+            ele.appendChild(tools);
             ele.appendChild(code);
             break;
         }

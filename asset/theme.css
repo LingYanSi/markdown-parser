@@ -72,11 +72,6 @@
     left: -1.4em;
 }
 
-.markdown .highlight {
-    border-radius: 5px;
-    min-height: 2em;
-}
-
 .markdown table {
     border-spacing: 0;
     border-top: 1px solid #eee;
@@ -85,12 +80,47 @@
 
 .markdown table th,.markdown table td {
     padding: .5em;
+    /* 1px边框 */
     border-right: 1px solid #eee;
     border-bottom: 1px solid #eee;
 }
 
+/* block-code优化 */
+.markdown .highlight {
+    border-radius: 5px;
+    min-height: 2em;
+    padding: 30px 10px 10px;
+}
+
 .markdown .blockCode {
     position: relative;
+}
+
+.markdown .blockCodeTools {
+    box-sizing: border-box;
+    padding: 10px;
+    position: absolute;
+    width: 100%;
+    left: 0;
+    top: 0px;
+    color: #fff;
+}
+
+.markdown .code-red, .markdown .code-yellow, .markdown .code-green {
+    display: inline-block;
+    height: 12px;
+    width: 12px;
+    margin-right: 8px;
+    border-radius: 100%;
+    background-color: #fc605b;
+}
+
+.markdown .code-yellow {
+    background-color: #fcbb40;
+}
+
+.markdown .code-green {
+    background-color: #2fc644;
 }
 
 .markdown .blockCodeCopyBtn {
