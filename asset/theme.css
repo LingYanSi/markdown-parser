@@ -104,10 +104,11 @@
     left: 0;
     top: 0px;
     color: #fff;
+    display: flex;
 }
 
 .markdown .code-red, .markdown .code-yellow, .markdown .code-green {
-    display: inline-block;
+    display: block;
     height: 12px;
     width: 12px;
     margin-right: 8px;
