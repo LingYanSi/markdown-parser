@@ -16,7 +16,7 @@ export function watchAfterUtil(index, tokens, fn) {
         offset += offsetNum;
         return [tokens[offset], offset];
     };
-    while (offset < tokens.length) {
+    while (offset <= tokens.length) {
         const item = tokens[offset];
         // 如果匹配成功，会向后加+1
         if (!fn(item, offset, moveIndex)) {
@@ -76,7 +76,7 @@ export const helper = {
         return {};
     },
     // 判断下一个字符是不是行尾
-    nextIsLienEnd(tokens, index) {
+    nextIsLineEnd(tokens, index) {
         const token = tokens[index + 1];
         return token && token.type === TKS.LINE_END;
     },
@@ -147,6 +147,7 @@ export function matchUsefulTokens(index, tokens, queue, handler) {
             if (typeof queue[queueTypeIndex] === 'object') {
                 // offset的偏移 + index大于tokens长度时，item不存在了
                 if (!item) {
+                    queueTypeIndex += 1;
                     break;
                 }
 

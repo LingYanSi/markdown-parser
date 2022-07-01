@@ -93,7 +93,7 @@ export function parseBlockCode(index, tokens, handler) {
                     return {
                         offset: 1,
                     };
-                } else if (helper.nextIsLienEnd(tokens, index)) {
+                } else if (helper.nextIsLineEnd(tokens, index)) {
                     this.content.push(tokens[index], tokens[index + 1]);
                     // debugger
                     return {
