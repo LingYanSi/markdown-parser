@@ -237,7 +237,7 @@ function toAST(tokens, defaultRoot) {
                 const node = createAstNode(nodeType.queto, matchTokens);
                 toAST(info.children, node);
                 root.push(node);
-                index += matchTokens.length;
+                index += matchTokens.length + 1; // 不渲染尾部空白行
             })
         ) {
             continue;
