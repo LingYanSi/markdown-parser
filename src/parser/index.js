@@ -318,7 +318,7 @@ function toAST(tokens, defaultRoot) {
                     root.push(node);
                 };
                 xx(info, root);
-                index += matchTokens.length + 1;  // list结束空白行只渲染一行
+                index += matchTokens.length + 1; // list结束空白行只渲染一行
             })
         ) {
             continue;
