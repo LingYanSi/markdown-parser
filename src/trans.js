@@ -88,7 +88,7 @@ export default function trans(node, $parent, option = {}) {
         case nodeType.url: {
             ele = document.createElement(node.type);
             ele.href = node.href;
-            ele.referrerPolicy = "no-referrer"; // 禁止外联追踪原始地址
+            ele.referrerPolicy = 'no-referrer'; // 禁止外联追踪原始地址
             ele.target = '_blank';
             break;
         }
@@ -115,6 +115,7 @@ export default function trans(node, $parent, option = {}) {
                         const a = document.createElement('a');
                         a.href = i;
                         a.textContent = i;
+                        a.referrerPolicy = 'no-referrer'; // 禁止外联追踪原始地址
                         a.target = '_blank';
                         ele.appendChild(a);
                     } else {
