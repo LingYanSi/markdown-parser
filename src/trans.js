@@ -88,6 +88,7 @@ export default function trans(node, $parent, option = {}) {
         case nodeType.url: {
             ele = document.createElement(node.type);
             ele.href = node.href;
+            ele.referrerPolicy = "no-referrer"; // 禁止外联追踪原始地址
             ele.target = '_blank';
             break;
         }
