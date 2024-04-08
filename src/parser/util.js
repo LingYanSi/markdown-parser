@@ -18,6 +18,10 @@ export function watchAfterUtil(index, tokens, fn) {
     };
     while (offset <= tokens.length) {
         const item = tokens[offset];
+        // 因为moveIndex可能会更改offset，因此在这里做一个校验
+        if (item === undefined) {
+            break
+        }
         // 如果匹配成功，会向后加+1
         if (!fn(item, offset, moveIndex)) {
             break;
