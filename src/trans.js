@@ -27,9 +27,9 @@ function removeAllChildren(element) {
  */
 function decodeUrl(v) {
     try {
-        return decodeURIComponent(v)
+        return decodeURIComponent(v);
     } catch (_) {
-        return v
+        return v;
     }
 }
 
