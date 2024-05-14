@@ -21,6 +21,19 @@ function removeAllChildren(element) {
 }
 
 /**
+ * 解码链接，解决链接中的中文编码显示问题
+ * @param {string} v
+ * @returns
+ */
+function decodeUrl(v) {
+    try {
+        return decodeURIComponent(v)
+    } catch (_) {
+        return v
+    }
+}
+
+/**
  * AST 转 dom
  * @param {ASTNode} node
  * @param {HTMLElement} $parent
@@ -114,7 +127,7 @@ export default function trans(node, $parent, option = {}) {
                     if (index % 2 === 1) {
                         const a = document.createElement('a');
                         a.href = i;
-                        a.textContent = i;
+                        a.textContent = decodeUrl(i);
                         a.referrerPolicy = 'no-referrer'; // 禁止外联追踪原始地址
                         a.target = '_blank';
                         ele.appendChild(a);
