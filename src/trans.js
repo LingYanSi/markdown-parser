@@ -69,20 +69,15 @@ export default function trans(node, $parent, option = {}) {
         case nodeType.img: {
             const result = node.src.match(/\.(\d+)x(\d+)\./);
             if (result) {
-                const [width, height] = result.slice(1, 3);
                 // 图片宽高占位
-                const { src } = node;
+                const [width, height] = result.slice(1, 3);
                 ele = document.createElement('div');
+                ele.className = "markdown-img-wrap"
                 ele.style.cssText = `;position: relative; max-width: ${width}px; overflow: hidden; background: rgb(219, 221, 215);`;
                 ele.innerHTML = `<div style="padding-top: ${
                     (height / width) * 100
                 }%;">
-                    <img ${
-                        // eslint-disable-next-line no-undef
-                        LY.lazyLoad.caches.includes(src)
-                            ? `src="${src}" data-img-cache="true"`
-                            : ''
-                    }
+                    <img
                         class="lazy-load-img img-loading"
                         data-lazy-img="${node.src}"
                         data-src="${node.src}"
