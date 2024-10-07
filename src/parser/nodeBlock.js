@@ -66,6 +66,38 @@ export function parseHead(index, tokens, handler) {
     return matchUsefulTokens(index, tokens, queue, handler);
 }
 
+function checkBlockCodeTag(tokens, index, isEnd = false) {
+    let offset = 0
+    let start = index - 1
+    // 允许行开始为 WHITE_SPACE?
+    if (helper.isType(tokens[index], TKS.WHITE_SPACE)) {
+        offset += 1
+        start += 1
+    }
+
+    const isMatch = watchAfter(tokens, start, 3).every((item) => {
+        offset += 1
+        return helper.isType(item, TKS.CODE_BLOCK);
+    })
+
+    // 闭合标签需要以此为结束 WHITE_SPACE? + isLineEnd
+    if (isMatch && isEnd) {
+        if (helper.isType(tokens[index + offset], TKS.WHITE_SPACE)) {
+            offset += 1
+        }
+        if (helper.isLineEnd(tokens[index + offset])) {
+            offset += 1
+        } else {
+            return false
+        }
+    }
+
+    if (isMatch) {
+        return { offset }
+    }
+    return false
+}
+
 /**
  * 解析代码块
  * @param {number} index
@@ -78,11 +110,24 @@ export function parseBlockCode(index, tokens, handler) {
         return false;
     }
 
+    // const offset = checkBlockCodeStart(tokens, index)
+    // if (offset < 0) {
+    //     return false
+    // }
+
     // 实现一个简单的向前向后看的正则
     const queue = [
-        TKS.CODE_BLOCK,
-        TKS.CODE_BLOCK,
-        TKS.CODE_BLOCK,
+        // TKS.CODE_BLOCK,
+        // TKS.CODE_BLOCK,
+        // TKS.CODE_BLOCK,
+        {
+            content: [],
+            name: 'block_code',
+            test(type, index, tokens) {
+                console.log(tokens[index])
+                return checkBlockCodeTag(tokens, index)
+            }
+        },
         {
             content: [],
             name: 'language',
@@ -109,21 +154,9 @@ export function parseBlockCode(index, tokens, handler) {
             name: 'code',
             test(type, index, tokens) {
                 // 通过向前看，向后看以解析判断，是否命中Node节点
-                if (type === TKS.CODE_BLOCK) {
-                    return helper.isLineStart(tokens, index) &&
-                        watchAfter(tokens, index, 3).every((item, at) => {
-                            if (at === 2) {
-                                return helper.isLineEnd(item);
-                            }
-                            return helper.isType(item, TKS.CODE_BLOCK);
-                        })
-                        ? {
-                              offset: 3,
-                          }
-                        : helper.goOn;
-                }
+                    return (helper.isLineStart(tokens, index) && checkBlockCodeTag(tokens, index, true)) || helper.goOn
 
-                return helper.goOn;
+
             },
         },
     ];
