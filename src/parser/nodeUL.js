@@ -67,7 +67,7 @@ export function parseList(index, tokens, handler) {
     // 如果是就新增一个对象
     while (true) {
         // 遇到两个换行结束遍历
-        if (tokens.slice(index, index + 2).every((i) => helper.isLineEnd(i))) {
+        if (tokens.slice(index, index + 1).every((i) => helper.isLineEnd(i))) {
             break;
         }
 
