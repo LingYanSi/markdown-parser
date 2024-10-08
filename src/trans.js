@@ -72,7 +72,7 @@ export default function trans(node, $parent, option = {}) {
                 // 图片宽高占位
                 const [width, height] = result.slice(1, 3);
                 ele = document.createElement('div');
-                ele.className = "markdown-img-wrap"
+                ele.className = 'markdown-img-wrap';
                 ele.style.cssText = `;position: relative; max-width: ${width}px; overflow: hidden; background: rgb(219, 221, 215);`;
                 ele.innerHTML = `<div style="padding-top: ${
                     (height / width) * 100
