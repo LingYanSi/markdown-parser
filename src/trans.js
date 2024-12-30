@@ -249,6 +249,11 @@ export default function trans(node, $parent, option = {}) {
             node.__update('id', node);
             break;
         }
+        // 根元素
+        case nodeType.root: {
+            ele = document.createElement('div');
+            break;
+        }
         default: {
             ele = document.createElement(node.type);
             node.indent && (ele.style.cssText += ';padding-left: 2em;');
