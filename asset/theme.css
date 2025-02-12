@@ -87,7 +87,7 @@
 
 /* block-code优化 */
 .markdown .highlight {
-    border-radius: 5px;
+    border-radius: 10px;
     min-height: 2em;
     padding: 35px 10px 10px;
 }
@@ -132,4 +132,5 @@
     cursor: pointer;
     line-height: 1;
     font-size: 12px;
+    font-weight: 600;
 }

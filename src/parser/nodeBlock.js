@@ -181,15 +181,19 @@ export function parseHr(index, tokens, handler) {
             test(type, index, tokens) {
                 // 通过向前看，向后看以解析判断，是否命中Node节点
                 if (helper.isType(tokens[index], TKS.NO_ORDER_LIST)) {
-                    const { matchTokens, nextToken } = watchAfterUtil(index, tokens, (item) => {
-                        return helper.isType(item, TKS.NO_ORDER_LIST);
-                    })
-                    let offset = matchTokens.length
+                    const { matchTokens, nextToken } = watchAfterUtil(
+                        index,
+                        tokens,
+                        (item) => {
+                            return helper.isType(item, TKS.NO_ORDER_LIST);
+                        }
+                    );
+                    let offset = matchTokens.length;
                     // 多读取一个换行符
                     if (helper.isType(nextToken, TKS.LINE_END)) {
-                        offset += 1
+                        offset += 1;
                     }
-                    return matchTokens.length >= 3 && { offset }
+                    return matchTokens.length >= 3 && { offset };
                 }
 
                 return false;
