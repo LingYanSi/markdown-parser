@@ -218,11 +218,13 @@ export function parseList(index, tokens, handler) {
                         content: [],
                         name: 'content',
                         test(type, index, tokens) {
-                            if (helper.isLineEnd(tokens[index])) {
+                            // 暗含的意思
+                            const result = helper.checkIsEnd(tokens, index);
+                            if (result.match) {
                                 // 需要解决立马遇到行尾的问题
-                                this.content.push(tokens[index]);
+                                this.content.push(...result.match);
                                 return {
-                                    offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
+                                    offset: result.match.length, // TODO:忽略结尾token，但其实应当添加到info上
                                 };
                             }
                             return helper.goOn;
