@@ -221,8 +221,16 @@ function toAST(tokens, defaultRoot) {
 
         if (
             parseBlockCode(index, tokens, (matchTokens, info) => {
+                let code = helper.tokensToString(info.code)
+                if (helper.isType(info.block_code[0], TKS.WHITE_SPACE)) {
+                    const identLen = info.block_code[0].raw.length
+                    code = code
+                        .split(/\n/)
+                        .map(i => i.replace(/^\s+/, s => s.slice(identLen)))
+                        .join('\n')
+                }
                 const node = createAstNode(nodeType.code, matchTokens, {
-                    code: helper.tokensToString(info.code),
+                    code,
                     language: helper.tokensToString(info.language).trim(),
                 });
                 root.push(node);
@@ -308,9 +316,15 @@ function toAST(tokens, defaultRoot) {
                             item.nodeType || nodeType.li
                         );
                         parseInlineNodeLoop(item.head, liNode);
+                        console.log(item)
+                        const tks = []
                         item.children.forEach((ele) => {
-                            parseInlineNodeLoop(ele.content, liNode);
+                            tks.push(...ele.content)
+                            // const node = createAstNode(nodeType.queto, matchTokens);
+                            // parseInlineNodeLoop(ele.content, liNode);
                         });
+                        toAST(tks, liNode);
+                        console.log({ liNode }, tks)
                         node.push(liNode);
                         item.ul.length && xx(item.ul, liNode);
                     });

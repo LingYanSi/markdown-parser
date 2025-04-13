@@ -124,7 +124,11 @@ export function parseBlockCode(index, tokens, handler) {
             content: [],
             name: 'block_code',
             test(type, index, tokens) {
-                return checkBlockCodeTag(tokens, index);
+                const res = checkBlockCodeTag(tokens, index);
+                if (res?.offset) {
+                    this.content = tokens.slice(index, index + res.offset)
+                }
+                return res
             },
         },
         {
