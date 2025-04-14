@@ -1,3 +1,4 @@
+import { getShared } from '../shared.js';
 import {
     helper,
     matchUsefulTokens,
@@ -20,13 +21,12 @@ function nestList(liList) {
     const stack = [];
     // 当前
     liList.forEach((item) => {
-        const deep = Math.floor(
-            item.ident.map((i) => i.raw).join('').length / 4
-        );
+        const deep =
+            item.ident.map((i) => i.raw).join('').length
         while (stack.length) {
             const relative = stack[stack.length - 1];
             if (relative.deep < deep) {
-                item.deep = relative.deep + 1;
+                item.deep = deep;
                 relative.ul.push(item);
                 stack.push(item);
                 break;
@@ -36,7 +36,7 @@ function nestList(liList) {
         }
 
         if (!stack.length) {
-            item.deep = 0;
+            item.deep = deep;
             root.children.push(item);
             stack.push(item);
         }

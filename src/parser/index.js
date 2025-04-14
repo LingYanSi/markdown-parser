@@ -221,13 +221,13 @@ function toAST(tokens, defaultRoot) {
 
         if (
             parseBlockCode(index, tokens, (matchTokens, info) => {
-                let code = helper.tokensToString(info.code)
+                let code = helper.tokensToString(info.code);
                 if (helper.isType(info.block_code[0], TKS.WHITE_SPACE)) {
-                    const identLen = info.block_code[0].raw.length
+                    const identLen = info.block_code[0].raw.length;
                     code = code
                         .split(/\n/)
-                        .map(i => i.replace(/^\s+/, s => s.slice(identLen)))
-                        .join('\n')
+                        .map((i) => i.replace(/^\s+/, (s) => s.slice(identLen)))
+                        .join('\n');
                 }
                 const node = createAstNode(nodeType.code, matchTokens, {
                     code,
@@ -307,7 +307,7 @@ function toAST(tokens, defaultRoot) {
 
         if (
             parseList(index, tokens, (matchTokens, info) => {
-                const xx = (info, root) => {
+                const handleInfo = (info, root) => {
                     const node = createAstNode(nodeType.ul, matchTokens);
                     node.listStyleType = info[0].listStyleType;
 
@@ -315,23 +315,18 @@ function toAST(tokens, defaultRoot) {
                         const liNode = createAstNode(
                             item.nodeType || nodeType.li
                         );
-                        parseInlineNodeLoop(item.head, liNode);
-                        console.log(item)
-                        const tks = []
+                        const tks = [...item.head];
                         item.children.forEach((ele) => {
-                            tks.push(...ele.content)
-                            // const node = createAstNode(nodeType.queto, matchTokens);
-                            // parseInlineNodeLoop(ele.content, liNode);
+                            tks.push(...ele.content);
                         });
                         toAST(tks, liNode);
-                        console.log({ liNode }, tks)
                         node.push(liNode);
-                        item.ul.length && xx(item.ul, liNode);
+                        item.ul.length && handleInfo(item.ul, liNode);
                     });
 
                     root.push(node);
                 };
-                xx(info, root);
+                handleInfo(info, root);
                 index += matchTokens.length + 1; // list结束空白行只渲染一行
             })
         ) {

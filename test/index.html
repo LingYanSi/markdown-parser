@@ -78,6 +78,7 @@
             border: none;
             cursor: pointer;
             outline: none;
+            line-height: 1.8;
         }
     </style>
 </head>
@@ -89,12 +90,11 @@
         <button id="preview">preview</button>
     </div>
     <script type="module">
-        import { markdown, Markdown, getParseResult } from '../src/index.js'
+        import { Markdown } from '../src/index.js'
         import { diffNode } from '../src/diff.js'
         import { formater } from '../src/formater/index.js'
         import Hotkey from './hotkeys/index.js'
 
-        window.getParseResult = getParseResult
         $('textarea').value = localStorage.getItem('markdown') || ``
 
         function $(s) {
@@ -107,7 +107,7 @@
         })
 
         const useUpdate = true
-        let md = new Markdown($('#render'), {
+        let md = new Markdown({
                 asset: [
                     '/asset/theme.css',
                     '/asset/highlight.min.js',
@@ -125,22 +125,9 @@
             localStorage.setItem('markdown', content)
 
             if (useUpdate) {
-                md.update(content)
+                md.update($('#render'), content)
                 return
             }
-
-            markdown($('#render'), content, {
-                asset: [
-                    '/asset/theme.css',
-                    '/asset/highlight.min.js',
-                    '/asset/highlight.theme.atom-one-dark.css'
-                ].map(i => {
-                    if (location.hostname.includes('github')) {
-                        return `/markdown-parser${i}`
-                    }
-                    return i;
-                }),
-            })
         }
 
         let timeout = null
