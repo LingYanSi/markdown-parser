@@ -1,4 +1,3 @@
-
 export const nodeType = {
     text: 'text',
     url: 'a',
@@ -48,8 +47,7 @@ export const INLINE_TYPE = [
     nodeType.blod,
     nodeType.italic,
     nodeType.linethrough,
-]
-
+];
 
 export const Reg = {
     // > 引用

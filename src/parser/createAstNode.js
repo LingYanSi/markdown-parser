@@ -26,7 +26,7 @@ class ASTNode {
     }
 
     getLastChild() {
-        return this.children[this.children.length - 1]
+        return this.children[this.children.length - 1];
     }
 
     get raw() {
