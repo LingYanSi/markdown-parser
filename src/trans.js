@@ -256,7 +256,7 @@ export default function trans(node, $parent, option = {}) {
         }
         case nodeType.hr: {
             ele = document.createElement('div');
-            ele.className = 'hr'
+            ele.className = 'hr';
             break;
         }
         default: {

@@ -34,20 +34,20 @@ function token(input = '') {
     while (index < input.length) {
         const char = input[index];
         let offset = 1;
-        const nextChar = input[index + 1]
+        const nextChar = input[index + 1];
         if (nextChar == ' ') {
             if (['*', '-'].includes(char)) {
                 tokens.push(
                     new Token(TKS.NO_ORDER_LIST, char, index, index + offset)
                 );
                 index += offset;
-                continue
+                continue;
             } else if (char == '+') {
                 tokens.push(
                     new Token(TKS.ORDER_LIST, char, index, index + offset)
                 );
                 index += offset;
-                continue
+                continue;
             }
         } else if (input.slice(index, index + 3) === '-->') {
             offset = 3;
@@ -62,7 +62,7 @@ function token(input = '') {
                 tokens.push(
                     new Token(TKS.NO_ORDER_LIST, char, index, index + offset)
                 );
-                break
+                break;
             }
             case '<': {
                 if (input.slice(index, index + 4) === '<!--') {
@@ -359,33 +359,33 @@ export function parser(str = '') {
  * @returns
  */
 function removeQuetoSymbol(arr = []) {
-    let index = 0
-    let res = []
-    while(index < arr.length) {
-        const item = arr[index]
+    let index = 0;
+    let res = [];
+    while (index < arr.length) {
+        const item = arr[index];
         if (item.type == TKS.LINE_END) {
-            let offset = 1
+            let offset = 1;
             // \s*>\* 会被移除掉
             if (
                 helper.isType(arr[index + 1], TKS.WHITE_SPACE) &&
                 helper.isType(arr[index + 2], TKS.SIMPLE_URL_END)
             ) {
-                offset += 2
+                offset += 2;
             } else if (helper.isType(arr[index + 1], TKS.SIMPLE_URL_END)) {
-                offset += 1
+                offset += 1;
             }
 
             if (offset !== 1) {
                 if (helper.isType(arr[offset], TKS.WHITE_SPACE)) {
-                    offset += 1
+                    offset += 1;
                 }
-                res.push(arr[index])
-                index += offset
-                continue
+                res.push(arr[index]);
+                index += offset;
+                continue;
             }
         }
-        res.push(arr[index])
-        index += 1
+        res.push(arr[index]);
+        index += 1;
     }
-    return res
+    return res;
 }

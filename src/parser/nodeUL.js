@@ -87,9 +87,10 @@ export function parseList(index, tokens, handler) {
                                     type,
                                     TKS.NO_ORDER_LIST,
                                     TKS.ORDER_LIST
-                                ) && helper.isType(
+                                ) &&
+                                helper.isType(
                                     tokens[index + 1],
-                                    TKS.WHITE_SPACE,
+                                    TKS.WHITE_SPACE
                                 )
                             ) {
                                 this.content.push(tokens[index]);
