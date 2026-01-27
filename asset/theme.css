@@ -2,6 +2,10 @@
 * markdown style
 */
 
+.markdown {
+    line-height: 1.8;
+}
+
 .markdown queto {
     margin: .2em 0;
     padding: 1em 1.3em;
@@ -14,11 +18,11 @@
     border-color: red;
 }
 
-.markdown hr {
+.markdown .hr {
     border: none;
     height: 1px;
     background: #ddd;
-    margin: 1.2em 0;
+    margin: 1em 0;
 }
 
 .markdown img {

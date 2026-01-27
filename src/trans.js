@@ -254,6 +254,11 @@ export default function trans(node, $parent, option = {}) {
             ele = document.createElement('div');
             break;
         }
+        case nodeType.hr: {
+            ele = document.createElement('div');
+            ele.className = 'hr'
+            break;
+        }
         default: {
             ele = document.createElement(node.type);
             node.indent && (ele.style.cssText += ';padding-left: 2em;');

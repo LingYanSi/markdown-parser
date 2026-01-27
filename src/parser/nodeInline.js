@@ -204,6 +204,9 @@ function parseItalic(index, tokens, handler) {
             content: [],
             name: 'content',
             test(type, index, tokens) {
+                if (tokens[index] == TKS.LINE_END) {
+                    return false
+                }
                 if (
                     [tokens[index + 1]].every((i) => helper.isType(i, TKS.BLOB))
                 ) {
@@ -236,6 +239,9 @@ function parseBlob(index, tokens, handler) {
             content: [],
             name: 'content',
             test(type, index, tokens) {
+                if (type == TKS.LINE_END) {
+                    return
+                }
                 if (
                     [tokens[index + 1], tokens[index + 2]].every((i) =>
                         helper.isType(i, TKS.BLOB)

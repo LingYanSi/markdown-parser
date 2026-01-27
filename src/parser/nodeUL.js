@@ -21,8 +21,7 @@ function nestList(liList) {
     const stack = [];
     // 当前
     liList.forEach((item) => {
-        const deep =
-            item.ident.map((i) => i.raw).join('').length
+        const deep = item.ident.map((i) => i.raw).join('').length;
         while (stack.length) {
             const relative = stack[stack.length - 1];
             if (relative.deep < deep) {
@@ -88,6 +87,9 @@ export function parseList(index, tokens, handler) {
                                     type,
                                     TKS.NO_ORDER_LIST,
                                     TKS.ORDER_LIST
+                                ) && helper.isType(
+                                    tokens[index + 1],
+                                    TKS.WHITE_SPACE,
                                 )
                             ) {
                                 this.content.push(tokens[index]);
@@ -162,7 +164,7 @@ export function parseList(index, tokens, handler) {
                                 }
 
                                 return {
-                                    offset: 1, // TODO:忽略结尾token，但其实应当添加到info上
+                                    offset: 2, // TODO:忽略结尾token，但其实应当添加到info上
                                 };
                             }
 

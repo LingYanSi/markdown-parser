@@ -34,26 +34,35 @@ function token(input = '') {
     while (index < input.length) {
         const char = input[index];
         let offset = 1;
-        // <!--  -->
-        switch (char) {
-            case '-': {
-                if (input.slice(index, index + 3) === '-->') {
-                    offset = 3;
-                    tokens.push(
-                        new Token(TKS.COMMENT_END, char, index, index + offset)
-                    );
-                    break;
-                }
+        const nextChar = input[index + 1]
+        if (nextChar == ' ') {
+            if (['*', '-'].includes(char)) {
                 tokens.push(
                     new Token(TKS.NO_ORDER_LIST, char, index, index + offset)
                 );
-                break;
-            }
-            case '+': {
+                index += offset;
+                continue
+            } else if (char == '+') {
                 tokens.push(
                     new Token(TKS.ORDER_LIST, char, index, index + offset)
                 );
-                break;
+                index += offset;
+                continue
+            }
+        } else if (input.slice(index, index + 3) === '-->') {
+            offset = 3;
+            tokens.push(
+                new Token(TKS.COMMENT_END, char, index, index + offset)
+            );
+            break;
+        }
+        // <!--  -->
+        switch (char) {
+            case '-': {
+                tokens.push(
+                    new Token(TKS.NO_ORDER_LIST, char, index, index + offset)
+                );
+                break
             }
             case '<': {
                 if (input.slice(index, index + 4) === '<!--') {
@@ -243,7 +252,8 @@ function toAST(tokens, defaultRoot) {
         if (
             parseBlockQuote(index, tokens, (matchTokens, info) => {
                 const node = createAstNode(nodeType.queto, matchTokens);
-                toAST(info.children, node);
+                // 需要去除掉\n white_space > white_space
+                toAST(removeQuetoSymbol(info.children), node);
                 root.push(node);
                 index += matchTokens.length + 1; // 不渲染尾部空白行
             })
@@ -341,4 +351,41 @@ function toAST(tokens, defaultRoot) {
 
 export function parser(str = '') {
     return toAST(token(str));
+}
+
+/**
+ * 如果匹配到是queto block，就移除其引用内容每行行首的>
+ * @param {} arr
+ * @returns
+ */
+function removeQuetoSymbol(arr = []) {
+    let index = 0
+    let res = []
+    while(index < arr.length) {
+        const item = arr[index]
+        if (item.type == TKS.LINE_END) {
+            let offset = 1
+            // \s*>\* 会被移除掉
+            if (
+                helper.isType(arr[index + 1], TKS.WHITE_SPACE) &&
+                helper.isType(arr[index + 2], TKS.SIMPLE_URL_END)
+            ) {
+                offset += 2
+            } else if (helper.isType(arr[index + 1], TKS.SIMPLE_URL_END)) {
+                offset += 1
+            }
+
+            if (offset !== 1) {
+                if (helper.isType(arr[offset], TKS.WHITE_SPACE)) {
+                    offset += 1
+                }
+                res.push(arr[index])
+                index += offset
+                continue
+            }
+        }
+        res.push(arr[index])
+        index += 1
+    }
+    return res
 }

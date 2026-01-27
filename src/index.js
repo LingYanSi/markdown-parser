@@ -62,7 +62,7 @@ class Markdown {
     getParseResult(content) {
         let parseResult = this.cache[content];
         if (!parseResult) {
-            setShared(this.config)
+            setShared(this.config);
             const root = parser(content);
             parseResult = { root, ...getParserNodeInfo(root) };
             this.cache[content] = parseResult;
@@ -78,15 +78,9 @@ class Markdown {
         this.prevRoot = result.root;
         patch(diffResult, dom);
 
-        const config = Object.assign({asset: []}, this.config);
+        const config = Object.assign({ asset: [] }, this.config);
         codeHighlight(dom, config);
     }
 }
 
-export {
-    Markdown,
-    formater,
-    parser,
-    trans,
-    codeHighlight,
-};
+export { Markdown, formater, parser, trans, codeHighlight };
