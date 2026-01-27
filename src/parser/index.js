@@ -11,6 +11,7 @@ import {
 } from './nodeBlock.js';
 import { parseTable } from './nodeTable.js';
 import { parseList } from './nodeUL.js';
+import { INLINE_TYPE } from '../nodeType.js';
 
 // @ts-check
 // TODO:
@@ -196,25 +197,32 @@ function token(input = '') {
  * 如果想递归分析，那就需要把start/end携带上，这样就不用不停的分配新数组了
  * 把token转换为Node
  * @param {Token[]} tokens
+ * * @param {import('../trans.js').ASTNode} defaultRoot
  */
 function toAST(tokens, defaultRoot) {
     const root = defaultRoot || createAstNode(nodeType.root, tokens);
     let index = 0;
 
+    let brBuffer = []
     while (index < tokens.length) {
         const token = tokens[index];
         if (!token) {
             break;
         }
         // 是不是行首
-        // parse head
         if (token.type === TKS.LINE_END) {
-            root.push(createAstNode(nodeType.br, [token]));
+            // root.push(createAstNode(nodeType.br, [token]))
+            // 只有前面是行内节点的，才处理换行
+            const lastMnode = root.children[root.children.length - 1]
+            if (INLINE_TYPE.includes(lastMnode?.type)) {
+                brBuffer = [createAstNode(nodeType.br, [token])]
+            }
+
             index += 1;
-            continue;
+            continue
         }
 
-        if (
+        else if (
             parseHead(index, tokens, (matchTokens, info) => {
                 const node = createAstNode(
                     nodeType['h' + info.headLevel.length],
@@ -225,10 +233,10 @@ function toAST(tokens, defaultRoot) {
                 index += matchTokens.length;
             })
         ) {
-            continue;
+            //
         }
 
-        if (
+        else if (
             parseBlockCode(index, tokens, (matchTokens, info) => {
                 let code = helper.tokensToString(info.code);
                 if (helper.isType(info.block_code[0], TKS.WHITE_SPACE)) {
@@ -246,10 +254,10 @@ function toAST(tokens, defaultRoot) {
                 index += matchTokens.length;
             })
         ) {
-            continue;
+            //
         }
 
-        if (
+        else if (
             parseBlockQuote(index, tokens, (matchTokens, info) => {
                 const node = createAstNode(nodeType.queto, matchTokens);
                 // 需要去除掉\n white_space > white_space
@@ -258,10 +266,10 @@ function toAST(tokens, defaultRoot) {
                 index += matchTokens.length + 1; // 不渲染尾部空白行
             })
         ) {
-            continue;
+            //
         }
 
-        if (
+        else if (
             parseTable(index, tokens, (matchTokens, info) => {
                 const node = createAstNode(nodeType.table, matchTokens);
                 const thead = createAstNode(nodeType.thead, info.thead);
@@ -301,10 +309,10 @@ function toAST(tokens, defaultRoot) {
                 index += matchTokens.length + 2; // 不渲染table结束空白行
             })
         ) {
-            continue;
+            //
         }
 
-        if (
+        else if (
             parseHr(index, tokens, (matchTokens) => {
                 const node = createAstNode(nodeType.hr, matchTokens);
 
@@ -312,10 +320,10 @@ function toAST(tokens, defaultRoot) {
                 index += matchTokens.length;
             })
         ) {
-            continue;
+            //
         }
 
-        if (
+        else if (
             parseList(index, tokens, (matchTokens, info) => {
                 const handleInfo = (info, root) => {
                     const node = createAstNode(nodeType.ul, matchTokens);
@@ -340,10 +348,24 @@ function toAST(tokens, defaultRoot) {
                 index += matchTokens.length + 1; // list结束空白行只渲染一行
             })
         ) {
-            continue;
-        }
+            //
+        } else {
+            // 解析到这里，肯定要追加文本节点了
+            if (brBuffer[0]) {
+                root.push(brBuffer[0])
+                brBuffer = []
+            }
 
-        index = toInlineNode(index, tokens, root);
+            index = toInlineNode(index, tokens, {
+                push(node) {
+                    root.push(node)
+                },
+                getLastChild() {
+                    return root.children[root.children.length - 1]
+                }
+            });
+        }
+        brBuffer = []
     }
 
     return root;

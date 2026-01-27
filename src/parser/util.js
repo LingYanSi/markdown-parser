@@ -1,4 +1,4 @@
-import nodeType, { TOKEN_TYPE as TKS } from '../nodeType.js';
+import { nodeType, TOKEN_TYPE as TKS } from '../nodeType.js';
 
 export { TKS, nodeType };
 

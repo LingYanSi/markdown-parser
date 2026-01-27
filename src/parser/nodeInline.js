@@ -364,7 +364,7 @@ export function toInlineNode(index, tokens, parentNode) {
         return index;
     }
 
-    const lastMnode = parentNode.children[parentNode.children.length - 1];
+    const lastMnode = parentNode.getLastChild();
     if (lastMnode && lastMnode.type === nodeType.text) {
         lastMnode.addToken(token);
     } else {

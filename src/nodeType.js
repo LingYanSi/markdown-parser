@@ -1,9 +1,8 @@
-export default {
+
+export const nodeType = {
     text: 'text',
     url: 'a',
     img: 'img',
-    video: 'video',
-    audio: 'audio',
     inlineCode: 'inlineCode',
     br: 'br',
     hr: 'hr',
@@ -11,6 +10,7 @@ export default {
     blod: 'b',
     italic: 'i',
     linethrough: 'lineThrough',
+
     // 标题
     h1: 'h1',
     h2: 'h2',
@@ -31,8 +31,25 @@ export default {
     li_done: 'li-done',
     li_todo: 'li-todo',
     comment: 'comment', // comment
-    htmlRaw: 'htmlRaw', // html原始元素
+
+    htmlRaw: 'htmlRaw', // html原始元素 TODO: 没有实现
+    video: 'video',
+    audio: 'audio',
 };
+
+export const INLINE_TYPE = [
+    nodeType.text,
+    nodeType.url,
+    nodeType.img,
+    nodeType.inlineCode,
+    nodeType.br,
+    nodeType.hr,
+    nodeType.root,
+    nodeType.blod,
+    nodeType.italic,
+    nodeType.linethrough,
+]
+
 
 export const Reg = {
     // > 引用

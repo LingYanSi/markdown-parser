@@ -25,6 +25,10 @@ class ASTNode {
         this.value = this.tokens.map((i) => i.raw).join('');
     }
 
+    getLastChild() {
+        return this.children[this.children.length - 1]
+    }
+
     get raw() {
         return (
             this.children

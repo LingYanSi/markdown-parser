@@ -3,7 +3,7 @@
  * 转换结束后AST上需要有HTMLNode的引用，方便下次patch，对HTMLNode做增删改
  * AST也应该提供props update方法，用来处理props更新
  */
-import nodeType from './nodeType.js';
+import {nodeType} from './nodeType.js';
 import { getParserNodeInfo } from './helper.js';
 import { copyToClipboard } from './copy.js';
 

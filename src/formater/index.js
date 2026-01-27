@@ -1,4 +1,4 @@
-import nodeType from './../nodeType.js';
+import {nodeType} from './../nodeType.js';
 import { parser } from './../parser/index.js';
 
 /** @typedef {import("./../../@type/index").ASTNode} ASTNode */
