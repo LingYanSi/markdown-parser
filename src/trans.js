@@ -223,9 +223,17 @@ export default function trans(node, $parent, option = {}) {
         case nodeType.li_todo: {
             realRoot = document.createElement('li');
 
-            const tag = document.createElement('span');
-            tag.className = 'list-todo-tag';
-            tag.textContent = node.type === nodeType.li_done ? '✅' : '🚧';
+            // const tag = document.createElement('span');
+            // tag.className = 'list-todo-tag';
+            // tag.textContent = node.type === nodeType.li_done ? '✅' : '🚧';
+
+            const tag = document.createElement('input');
+            tag.type = 'checkbox'
+            tag.classList = 'mk-tag-checkbox'
+            tag.checked = node.type === nodeType.li_done
+            tag.readOnly = true
+            // tag.textContent = node.type === nodeType.li_done ? '✅' : '🚧';
+
             realRoot.appendChild(tag);
 
             ele = document.createElement('span');
@@ -271,7 +279,7 @@ export default function trans(node, $parent, option = {}) {
 
     realRoot = realRoot || ele;
     node.$getNode = $getNode;
-
+    ele?.classList?.add('mk-tag-' + node.type)
     node.tag && ele.setAttribute('tag', node.tag);
     node.children && node.children.forEach((child) => trans(child, ele));
 

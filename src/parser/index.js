@@ -209,18 +209,7 @@ function toAST(tokens, defaultRoot) {
         if (!token) {
             break;
         }
-        // 是不是行首
-        if (token.type === TKS.LINE_END) {
-            // root.push(createAstNode(nodeType.br, [token]))
-            // 只有前面是行内节点的，才处理换行
-            const lastMnode = root.children[root.children.length - 1];
-            if (INLINE_TYPE.includes(lastMnode?.type)) {
-                brBuffer = [createAstNode(nodeType.br, [token])];
-            }
-
-            index += 1;
-            continue;
-        } else if (
+        if (
             parseHead(index, tokens, (matchTokens, info) => {
                 const node = createAstNode(
                     nodeType['h' + info.headLevel.length],
@@ -337,13 +326,15 @@ function toAST(tokens, defaultRoot) {
             })
         ) {
             //
-        } else {
-            // 解析到这里，肯定要追加文本节点了
-            if (brBuffer[0]) {
-                root.push(brBuffer[0]);
-                brBuffer = [];
+        } else if (token.type === TKS.LINE_END) {
+            // 是不是行首
+            const lastMnode = root.children[root.children.length - 1];
+            if (INLINE_TYPE.includes(lastMnode?.type)) {
+                root.push(createAstNode(nodeType.br, [token]));
             }
 
+            index += 1;
+        } else {
             index = toInlineNode(index, tokens, {
                 push(node) {
                     root.push(node);
@@ -353,7 +344,6 @@ function toAST(tokens, defaultRoot) {
                 },
             });
         }
-        brBuffer = [];
     }
 
     return root;

@@ -140,3 +140,11 @@
     font-size: 12px;
     font-weight: 600;
 }
+
+.markdown .mk-tag-text {
+    white-space: pre-wrap; /** 保持空格 */
+}
+
+.markdown .mk-tag-checkbox {
+    vertical-align: middle;
+}
